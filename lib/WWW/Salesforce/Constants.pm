@@ -124,7 +124,7 @@ BEGIN {
             'systemmodstamp'   => 'xsd:dateTime',
         },
         'attachment' => {
-            'body'             => 'xsd:base64binary',
+            'body'             => 'xsd:base64Binary',
             'bodylength'       => 'xsd:int',
             'contenttype'      => 'xsd:string',
             'createdbyid'      => 'xsd:string',
@@ -398,7 +398,7 @@ BEGIN {
         },
         'document' => {
             'authorid'          => 'xsd:string',
-            'body'              => 'xsd:base64binary',
+            'body'              => 'xsd:base64Binary',
             'bodylength'        => 'xsd:int',
             'contenttype'       => 'xsd:string',
             'createdbyid'       => 'xsd:string',
@@ -571,7 +571,7 @@ BEGIN {
             'systemmodstamp'   => 'xsd:dateTime',
         },
         'mailmergetemplate' => {
-            'body'             => 'xsd:base64binary',
+            'body'             => 'xsd:base64Binary',
             'bodylength'       => 'xsd:int',
             'createdbyid'      => 'xsd:string',
             'createddate'      => 'xsd:dateTime',
@@ -889,7 +889,7 @@ BEGIN {
             'systemmodstamp'    => 'xsd:dateTime',
         },
         'scontrol' => {
-            'binary'           => 'xsd:base64binary',
+            'binary'           => 'xsd:base64Binary',
             'bodylength'       => 'xsd:int',
             'createdbyid'      => 'xsd:string',
             'createddate'      => 'xsd:dateTime',

@@ -8,7 +8,7 @@ use base 'WWW::Salesforce';
 
 #handle versioning and exporting
 use vars qw( $VERSION );
-$VERSION = '0.10';
+$VERSION = $WWW::Salesforce::VERSION;
 
 #**************************************************************************
 # new( %params ) ------CONSTRUCTOR
@@ -16,7 +16,7 @@ $VERSION = '0.10';
 #**************************************************************************
 sub new {
     my ($class) = shift;
-    my $self = $class->SUPER::login(@_) or return 0;
+    my $self = $class->SUPER::login(@_) or die 'could not login';
     return $self;
 }
 
@@ -28,22 +28,23 @@ sub do_query {
     my ( $self, $query, $limit ) = @_;
 
     if ( !defined $query || $query !~ m/^select/i ) {
-        carp('Param1 of do_query() should be a string SQL query');
-        return 0;
+        die('Param1 of do_query() should be a string SQL query');
     }
 
     $limit = 2000
-      unless $limit =~ m/^\d+$/
+      unless defined $limit
+          and $limit =~ m/^\d+$/
           and $limit > 0
           and $limit < 2001;
 
     my @rows = ();    #to be returned
 
     my $res = $self->query( query => $query, limit => $limit );
-
+    unless ($res) {
+        die "could not execute query $query, limit $limit";
+    }
     if ( $res->fault() ) {
-        carp( $res->faultstring() );
-        return 0;
+        die( $res->faultstring() );
     }
 
     push @rows, $res->valueof('//queryResponse/result/records')
@@ -58,10 +59,11 @@ sub do_query {
             queryLocator => $ql,
             limit        => $limit
         );
-
+        unless ($res) {
+            die "could not execute queryMore $ql, limit $limit";
+        }
         if ( $res->fault() ) {
-            carp( $res->faultstring() );
-            return 0;
+            die( $res->faultstring() );
         }
         $done = $res->valueof('//queryMoreResponse/result/done');
         $ql   = $res->valueof('//queryMoreResponse/result/queryLocator');
@@ -81,14 +83,15 @@ sub get_field_list {
     my ( $self, $table_name ) = @_;
 
     if ( !defined $table_name || !length $table_name ) {
-        carp('Param1 of get_field_list() should be a string');
-        return 0;
+        die('Param1 of get_field_list() should be a string');
     }
 
     my $res = $self->describeSObject( 'type' => $table_name );
+    unless ($res) {
+        die "could not describeSObject for table $table_name";
+    }
     if ( $res->fault() ) {
-        carp( $res->faultstring() );
-        return 0;
+        die( $res->faultstring() );
     }
 
     my @fields = $res->valueof('//describeSObjectResponse/result/fields');
@@ -103,9 +106,11 @@ sub get_tables {
     my ($self) = @_;
 
     my $res = $self->describeGlobal();
+    unless ($res) {
+        die "could not describeGlobal()";
+    }
     if ( $res->fault() ) {
-        carp( $res->faultstring() );
-        return 0;
+        die( $res->faultstring() );
     }
 
     my @globals = $res->valueof('//describeGlobalResponse/result/types');
@@ -127,6 +132,8 @@ Because the Salesforce API is somewhat cumbersome to deal with, this class
 was created to make it a little simpler to get information.
 
 =head1 METHODS
+
+This class inherits all the methods from L<WWW::Salesforce> and adds the following new ones.
 
 =head2 new( %parameters )
 

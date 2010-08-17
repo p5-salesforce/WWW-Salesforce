@@ -67,6 +67,10 @@ sub convertLead {
     my $r      = $client->convertLead(
         SOAP::Data->name( "leadConverts" => \SOAP::Data->value(@data) ),
         $self->get_session_header() );
+
+    unless ($r) {
+        die "cound not convertLead";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -104,6 +108,9 @@ sub create {
           ->attr( { 'xsi:type' => 'sfons:' . $type } ),
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -133,6 +140,9 @@ sub delete {
         $method => @elems,
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -151,6 +161,9 @@ sub describeGlobal {
       SOAP::Data->name("describeGlobal")->prefix($SF_PREFIX)->uri($SF_URI);
 
     my $r = $client->call( $method, $self->get_session_header() );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -178,6 +191,9 @@ sub describeLayout {
           ->type('xsd:string'),
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -207,6 +223,9 @@ sub describeSObject {
           ->type('xsd:string'),
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -239,6 +258,9 @@ sub describeTabs {
       SOAP::Data->name("describeTabs")->prefix($SF_PREFIX)->uri($SF_URI);
 
     my $r = $client->call( $method, $self->get_session_header() );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -307,6 +329,9 @@ sub getDeleted {
           ->type('xsd:dateTime'),
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -321,6 +346,9 @@ sub getServerTimestamp {
     my $self   = shift;
     my $client = $self->get_client(1);
     my $r      = $client->getServerTimestamp( $self->get_session_header() );
+    unless ($r) {
+        die "could not getServerTimestamp";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -361,6 +389,9 @@ sub getUpdated {
           ->type('xsd:dateTime'),
         $self->get_session_header()
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -376,6 +407,9 @@ sub getUserInfo {
     my $self   = shift;
     my $client = $self->get_client(1);
     my $r      = $client->getUserInfo( $self->get_session_header() );
+    unless ($r) {
+        die "could not getUserInfo";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -411,6 +445,10 @@ sub login {
         SOAP::Data->name( 'username' => $self->{'sf_user'} ),
         SOAP::Data->name( 'password' => $self->{'sf_pass'} )
     );
+    unless ($r) {
+        die sprintf("could not login, user %s, pass %s",
+            $self->{'sf_user'}, $self->{'sf_pass'});
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -445,6 +483,10 @@ sub query {
     my $client = $self->get_client();
     my $r = $client->query( SOAP::Data->name( 'queryString' => $in{'query'} ),
         $limit, $self->get_session_header() );
+
+    unless ($r) {
+        die "could not query " . $in{'query'};
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -474,6 +516,11 @@ sub queryMore {
     my $r      = $client->queryMore(
         SOAP::Data->name( 'queryLocator' => $in{'queryLocator'} ),
         $limit, $self->get_session_header() );
+
+    unless ($r) {
+        die "could not queryMore " . $in{'queryLocator'};
+    }
+
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -502,6 +549,9 @@ sub resetPassword {
         $self->get_session_header()
     );
 
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -549,6 +599,9 @@ sub retrieve {
         $self->get_session_header()
     );
 
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -573,6 +626,10 @@ sub search {
           ->name( 'searchString' => $in{'searchString'} )->type('xsd:string'),
         $self->get_session_header()
     );
+
+    unless ($r) {
+        die "could not search with " . $in{'searchString'};
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -605,6 +662,10 @@ sub setPassword {
           ->type('xsd:string'),
         $self->get_session_header()
     );
+
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -662,6 +723,9 @@ sub update {
         $method => $self->get_session_header(),
         @updates
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -716,6 +780,9 @@ sub upsert {
         $method => $self->get_session_header(),
         @updates
     );
+    unless ($r) {
+        die "could not call method $method";
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -726,7 +793,6 @@ sub upsert {
 1;
 __END__
 
-=pod
 =head1 NAME
 
 WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
@@ -734,8 +800,9 @@ WWW::Salesforce - this class provides a simple abstraction layer between SOAP::L
 =head1 SYNOPSIS
 
     use WWW::Salesforce;
-    my $sforce = WWW::Salesforce->login( username => 'foo', password => 'bar' )
-        or die $!;
+    my $sforce = WWW::Salesforce->login( username => 'foo',
+        password => 'bar' )
+        or die "Could not login: $@";
 
 =head1 DESCRIPTION
 
@@ -747,7 +814,7 @@ This class provides a simple abstraction layer between SOAP::Lite and Salesforce
 
 =item login( HASH )
 
-The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, $! is set containing the error and a 0 is returned.
+The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
 
 The following are the accepted input parameters:
 
@@ -781,7 +848,12 @@ The following are the accepted input parameters:
 =item create( HASH )
 
 Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your arganization.
-The hash must contain the 'Type' key in order to identify the type of the record to add.
+The hash must contain the 'type' key in order to identify the type of the record to add.
+
+Returns a SOAP::Lite object.  Success of this operation can be gleaned from
+the envelope result.
+
+    $r->envelope->{Body}->{createResponse}->{result}->{success};
 
 =over
 
@@ -989,8 +1061,8 @@ The search string to be used in the query. For example, "find {4159017000} in ph
 =head2 login()
 
     use WWW::Salesforce;
-    my $sforce = WWW::Salesforce->login( 'username' => $user,'password' => $pass )
-        or die $!;
+    my $sf = WWW::Salesforce->login( 'username' => $user,'password' => $pass )
+        or die $@;
 
 =head2 search()
 

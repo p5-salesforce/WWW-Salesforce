@@ -1,10 +1,14 @@
 Revision history for Perl extension WWW::Salesforce.
 
-0.12 Tue Aug 17 14:00:00 2010 PST
+0.12 Tue Aug 17 15:21:00 2010 PST
     - New maintainer PHRED
     - Die with an error string instead of carping and returning
     - Skip tests in automated testing mode
     - Skip tests unless user, pass, and sectoken environment vars set
+    - Fix failing test - base64binary => base64Binary namespace change
+    - Perltidy file contents and remove unnecessary package scope braces
+    - Handle undefined return values from SOAP client
+    - Fix Type => type doc error in create()
 
 0.11 Thurs April 23 15:00:00 2009
     - Fixed a problem with some documentation and code discrepencies (thanks to Michael Blanco)

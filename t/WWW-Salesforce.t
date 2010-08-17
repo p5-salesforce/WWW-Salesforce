@@ -198,7 +198,6 @@ SKIP: {
             skip( "Can't get folder ID since the query failed", 1 )
               unless $passed;
 
-            $DB::single = 1;
             # get the folder id and create an image body
             my ($folder) = $res->valueof('//records');
             $fid = $folder->{'Id'}[0];
