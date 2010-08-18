@@ -1,7 +1,8 @@
 Revision history for Perl extension WWW::Salesforce.
 
-0.12 Tue Aug 17 15:21:00 2010 PST
+0.12 Tue Aug 17 19:34:00 2010 PST
     - New maintainer PHRED
+    - Thanks to Mark Stosberg for several patches for this version
     - Die with an error string instead of carping and returning
     - Skip tests in automated testing mode
     - Skip tests unless user, pass, and sectoken environment vars set

@@ -823,9 +823,13 @@ WWW::Salesforce - this class provides a simple abstraction layer between SOAP::L
 =head1 SYNOPSIS
 
     use WWW::Salesforce;
-    my $sforce = WWW::Salesforce->login( username => 'foo',
-        password => 'bar' )
-        or die "Could not login: $@";
+    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
+                                                password => 'bar' ); };
+    die "Could not login to SFDC: $@" if $@;
+
+    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
+    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
+    # by eval'ing and handling any exceptions that occur.
 
 =head1 DESCRIPTION
 
