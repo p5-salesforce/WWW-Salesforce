@@ -239,10 +239,33 @@ sub describeSObject {
 #       or array of objects.
 #**************************************************************************
 sub describeSObjects {
+    my $self = shift;
+    my %in   = @_;
 
-    # TODO: new to v7.0
-    warn("not done yet");
-    die("This is on the todo list");
+    if (  !defined $in{type}
+        or ref $in{type} ne 'ARRAY'
+        or !scalar @{ $in{type} } )
+    {
+        die "Expected hash with key 'type' containing array reference";
+    }
+
+    my $client = $self->get_client(1);
+    my $method =
+      SOAP::Data->name("describeSObjects")->prefix($SF_PREFIX)->uri($SF_URI);
+
+    my $r = $client->call(
+        $method => SOAP::Data->prefix($SF_PREFIX)->name('sObjectType')
+          ->value( @{ $in{'type'} } )->type('xsd:string'),
+        $self->get_session_header()
+    );
+
+    unless ($r) {
+        die "could not execute method $method";
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    return $r;
 }
 
 #**************************************************************************
@@ -446,8 +469,8 @@ sub login {
         SOAP::Data->name( 'password' => $self->{'sf_pass'} )
     );
     unless ($r) {
-        die sprintf("could not login, user %s, pass %s",
-            $self->{'sf_user'}, $self->{'sf_pass'});
+        die sprintf( "could not login, user %s, pass %s",
+            $self->{'sf_user'}, $self->{'sf_pass'} );
     }
     if ( $r->fault() ) {
         die( $r->faultstring() );
