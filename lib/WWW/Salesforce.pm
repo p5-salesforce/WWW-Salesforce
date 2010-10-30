@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI
 );
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -1161,6 +1161,11 @@ Copyright 2010 Fred Moyer, All rights reserved.
 Copyright 2005-2007 Chase Whitener.
 
 Copyright 2003-2004 Byrne Reese, Chase Whitener. All rights reserved.
+
+=head1 LICENSE
+
+This library is free software and may be distributed under the same terms
+as perl itself.
 
 =cut
 

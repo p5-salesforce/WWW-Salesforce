@@ -1,5 +1,9 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.13 Sat Oct 30 14:05:00 2010 PST
+
+    - Add LICENSE file per Fedora maintainer request
+
 0.12 Tue Aug 17 19:34:00 2010 PST
     - New maintainer PHRED
     - Thanks to Mark Stosberg for several patches for this version
