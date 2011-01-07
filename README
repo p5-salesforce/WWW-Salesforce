@@ -76,6 +76,20 @@ DESCRIPTION
             is helpful in producing paginated results, or fetch small sets
             of data at a time.
 
+    queryAll( HASH )
+        Executes a query against the specified object and returns data that
+        matches the specified criteria including deleted and archived records.
+
+        query
+            The query string to use for the query. The query string takes
+            the form of a *basic* SQL statement. For example, "SELECT
+            Id,Name FROM Account".
+
+        limit
+            This sets the batch size, or size of the result returned. This
+            is helpful in producing paginated results, or fetch small sets
+            of data at a time.
+
     queryMore( HASH )
         Retrieves the next batch of objects from a "query".
 

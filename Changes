@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.14 Fri Jan 06 17:23:00 2010 PST
+    - Added queryAll and do_queryAll functionality
+
 0.13 Sat Oct 30 14:05:00 2010 PST
 
     - Add LICENSE file per Fedora maintainer request

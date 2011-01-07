@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI
 );
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -517,6 +517,40 @@ sub query {
 }
 
 #**************************************************************************
+# queryAll( %in )  --API
+#   -- runs a query against salesforce including archived and deleted 
+#      objects in its return
+#**************************************************************************
+sub queryAll {
+    my $self = shift;
+    my (%in) = @_;
+    if ( !defined $in{'query'} || !length $in{'query'} ) {
+        die("A query is needed for the query() method.");
+    }
+    if ( !defined $in{'limit'} || $in{'limit'} !~ m/^\d+$/ ) {
+        $in{'limit'} = 500;
+    }
+    if ( $in{'limit'} < 1 || $in{'limit'} > 2000 ) {
+        die("A query's limit cannot exceed 2000. 500 is default.");
+    }
+
+    my $limit = SOAP::Header->name(
+        'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
+      ->prefix($SF_PREFIX)->uri($SF_URI);
+    my $client = $self->get_client();
+    my $r = $client->queryAll( SOAP::Data->name( 'queryString' => $in{'query'} ),
+        $limit, $self->get_session_header() );
+
+    unless ($r) {
+        die "could not query " . $in{'query'};
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    return $r;
+}
+
+#**************************************************************************
 # queryMore()  --API
 #   -- query from where you last left off
 #**************************************************************************
@@ -910,9 +944,26 @@ This sets the batch size, or size of the result returned. This is helpful in pro
 
 =back
 
+=item queryAll( HASH )
+
+Executes a query against the specified object and returns data that matches the
+specified criteria including archived and deleted objects.
+
+=over 
+
+=item query
+
+The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
 =item queryMore( HASH )
 
-Retrieves the next batch of objects from a C<query>.
+Retrieves the next batch of objects from a C<query> or C<queryAll>.
 
 =over 
 

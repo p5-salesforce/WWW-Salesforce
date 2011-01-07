@@ -54,8 +54,69 @@ sub do_query {
     #if there are more to get
     my $done = $res->valueof('//queryResponse/result/done');
     my $ql   = $res->valueof('//queryResponse/result/queryLocator');
-    while ( $done eq 'false' ) {
-        $res = $self->queryMore(
+    if ( $done eq 'false' ) {
+        push @rows, @{$self->_retrieve_queryMore($ql, $limit)};
+    }
+
+    return \@rows;
+}
+
+#**************************************************************************
+# do_queryAll( $query, [$limit] )
+#   -- returns a reference to an array of hash refs
+#**************************************************************************
+sub do_queryAll {
+    my ( $self, $query, $limit ) = @_;
+
+    if ( !defined $query || $query !~ m/^select/i ) {
+        die('Param1 of do_queryAll() should be a string SQL query');
+    }
+
+    $limit = 2000
+      unless defined $limit
+          and $limit =~ m/^\d+$/
+          and $limit > 0
+          and $limit < 2001;
+
+    my @rows = ();    #to be returned
+
+    my $res = $self->queryAll( query => $query, limit => $limit );
+    unless ($res) {
+        die "could not execute query $query, limit $limit";
+    }
+    if ( $res->fault() ) {
+        die( $res->faultstring() );
+    }
+
+    push @rows, $res->valueof('//queryAllResponse/result/records')
+      if ( $res->valueof('//queryAllResponse/result/size') > 0 );
+
+    #we get the results in batches of 2,000... so continue getting them
+    #if there are more to get
+    my $done = $res->valueof('//queryAllResponse/result/done');
+    my $ql   = $res->valueof('//queryAllResponse/result/queryLocator');
+    if ( $done eq 'false' ) {
+        push @rows, @{$self->_retrieve_queryMore($ql, $limit)};
+    }
+
+    return \@rows;
+}
+
+#**************************************************************************
+# _retrieve_queryMore
+#  -- returns the next block of a running query set. Supports do_query
+#     and do_queryAll
+#
+#**************************************************************************
+
+sub _retrieve_queryMore {
+    my ( $self, $ql, $limit ) = @_;
+
+    my $done = 'false';
+    my @results;
+
+    while ($done eq 'false') {
+        my $res = $self->queryMore(
             queryLocator => $ql,
             limit        => $limit
         );
@@ -67,11 +128,14 @@ sub do_query {
         }
         $done = $res->valueof('//queryMoreResponse/result/done');
         $ql   = $res->valueof('//queryMoreResponse/result/queryLocator');
-        push @rows, $res->valueof('//queryMoreResponse/result/records')
-          if ( $res->valueof('//queryMoreResponse/result/size') );
+
+        if ( $res->valueof('//queryMoreResponse/result/size') ) {
+            push @results, $res->valueof('//queryMoreResponse/result/records');
+        }
     }
 
-    return \@rows;
+    return \@results;
+
 }
 
 #**************************************************************************
@@ -146,6 +210,13 @@ Executes a query against the information in Salesforce.  Returns a reference
 to an array of hash references keyed by the column names. Strict attention
 should be paid to the case of the field names.
 
+=head2 do_queryAll( $sql_query_string )
+
+Executes a query against the information in Salesforce.  Returns a reference
+to an array of hash references keyed by the column names that includes deleted
+and archived objects. Strict attention should be paid to the case of the field
+names.
+
 =head2 get_field_list( $table_name )
 
 Gathers a list of fields contained in a given table.  Returns a reference
@@ -175,6 +246,17 @@ reference to an array of strings representing each table name.
     my $query = 'select Id from Account';
 
     my $res = $sforce->do_query( $query );
+
+    foreach my $field ( @{ $res } ) {
+        print $field->{'Id'} . "\n";
+    }
+    print "Found " . scalar @{$res} . " results\n";    
+
+=head2 do_queryAll( $query )
+
+    my $query = 'select Id from Account';
+
+    my $res = $sforce->do_queryAll( $query );
 
     foreach my $field ( @{ $res } ) {
         print $field->{'Id'} . "\n";

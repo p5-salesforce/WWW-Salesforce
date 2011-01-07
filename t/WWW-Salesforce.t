@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 31;
 
 use SOAP::Lite;
 
@@ -25,7 +25,7 @@ if ( !$automated && !$ENV{SFDC_USER} &&
 
 SKIP: {
 
-    skip $skip_reason, 28, if $skip_reason;
+    skip $skip_reason, 30, if $skip_reason;
 
     my $user = $ENV{SFDC_USER};
     my $pass = $ENV{SFDC_PASS} . $ENV{SFDC_TOKEN};
@@ -97,6 +97,23 @@ SKIP: {
             $res =
               $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
             ok( $res, "queryMore accounts" ) or diag($!);
+        }
+    }
+
+    #test -- queryAll
+    {
+        my $res =
+          $sforce->queryAll( 'query' => 'select id from account', 'limit' => 5 );
+        ok( $res, "queryAll accounts" ) or diag($!);
+
+        #test -- queryMore against queryAll
+      SKIP: {
+            my $locator = $res->valueof('//queryAllResponse/result/queryLocator')
+              if $res;
+            skip( "No more results to queryMore for", 1 ) unless $locator;
+            $res =
+              $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
+            ok( $res, "queryMore all accounts" ) or diag($!);
         }
     }
 
