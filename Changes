@@ -1,5 +1,7 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.15
+
 0.14 Fri Jan 07 14:23:00 2011 PST
     - Added queryAll and do_queryAll functionality [Christopher Mckay]
 
