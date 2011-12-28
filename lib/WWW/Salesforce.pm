@@ -12,7 +12,7 @@ use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
 
 use vars qw(
-  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI
+  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION
 );
 
 $VERSION = '0.15';
@@ -21,7 +21,10 @@ $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
 $SF_PREFIX      = 'sforce';
 $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
+$SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
+$SF_APIVERSION  = '23.0';
 
+#
 #**************************************************************************
 # new( %params )
 #   -- DEPRECATED
@@ -479,7 +482,7 @@ sub login {
     $self->{'sf_sid'}       = $r->valueof('//loginResponse/result/sessionId');
     $self->{'sf_uid'}       = $r->valueof('//loginResponse/result/userId');
     $self->{'sf_serverurl'} = $r->valueof('//loginResponse/result/serverUrl');
-
+    $self->{'sf_metadataServerUrl'} = $r->valueof('//loginResponse/result/metadataServerUrl');
     return $self;
 }
 
@@ -845,6 +848,146 @@ sub upsert {
     }
     return $r;
 }
+
+#
+# NEW Methods
+#
+###########################
+
+sub get_clientM {
+    my $self = shift;
+    my ($readable) = @_;
+    $readable = ($readable) ? 1 : 0;
+
+    my $client =
+      SOAP::Lite->readable($readable)
+      ->deserializer( WWW::Salesforce::Deserializer->new )
+      ->serializer( WWW::Salesforce::Serializer->new )
+      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1)
+      ->proxy( $self->{'sf_metadataServerUrl'} )
+      ->soapversion('1.1');
+    return $client;
+}
+
+sub get_session_headerM {
+    my ($self) = @_;
+    return SOAP::Header->name( 'SessionHeader' =>
+          \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
+      ->uri($SF_URIM)->prefix($SF_PREFIX);
+
+}
+
+sub describeMetadata {
+    my $self = shift;
+    my $client = $self->get_clientM(1);
+    my $method =
+      SOAP::Data->name("describeMetadata")->prefix($SF_PREFIX)->uri($SF_URIM);
+
+    my $r = $client->call(
+          $method =>
+          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->get_session_headerM() );
+    unless ($r) {
+        die "could not call method $method";
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    return $r->valueof('//describeMetadataResponse/result');
+}
+
+sub retrieveMetadata {
+    my $self = shift;
+    my %list = @_;
+    my @req;
+    foreach my $i (keys %list) {
+       push (@req,SOAP::Data->name('types'=>
+                        \SOAP::Data->value(
+                            SOAP::Data->name('members'=>$list{$i}),
+                            SOAP::Data->name('name'=>$i)
+                        )
+                    ));
+    }
+    my $client = $self->get_clientM(1);
+    my $method =
+      SOAP::Data->name('retrieve')->prefix($SF_PREFIX)->uri($SF_URIM);
+    my $r = $client->call(
+            $method,
+            $self->get_session_headerM(),
+SOAP::Data->name('retrieveRequest'=>
+       \SOAP::Data->value(
+       SOAP::Data->name( 'apiVersion'=>$SF_APIVERSION),
+       SOAP::Data->name( 'singlePackage'=>'true'),
+       SOAP::Data->name('unpackaged'=>
+                   \SOAP::Data->value( @req
+           ,SOAP::Data->name('version'=>$SF_APIVERSION))
+         )
+       )
+     )
+    );
+    unless ($r) {
+        die "could not call method $method";
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    $r = $r->valueof('//retrieveResponse/result');
+    return $r;
+}
+sub checkAsyncStatus {
+    my $self = shift;
+    my $pid = shift;
+    #print "JOB - ID $pid\n";
+    my $client = $self->get_clientM(1);
+    my $method = SOAP::Data->name('checkStatus')->prefix($SF_PREFIX)->uri($SF_URIM);
+    my $r;
+    my $waitTimeMilliSecs = 1;
+    my $Count =1 ;
+    my $MAX_NUM_POLL_REQUESTS = 50;
+    while (1) {
+        sleep($waitTimeMilliSecs);
+        $waitTimeMilliSecs *=2;
+        $r = $client->call(
+                $method,
+                SOAP::Data->name('asyncProcessId'=>$pid)->type('xsd:ID'),
+                $self->get_session_headerM()
+        );
+        unless ($r) {
+            die "could not call method $method";
+        }
+        if ( $r->fault() ) {
+            die( $r->faultstring() );
+        }
+        $r = $r->valueof('//checkStatusResponse/result');
+        last if ($r->{'done'} eq 'true' || $Count >$MAX_NUM_POLL_REQUESTS);
+        $Count++;
+    }
+    if ($r->{'done'} eq 'true') {
+        return $self->checkRetrieveStatus($r->{'id'});
+    }
+    return;
+}
+
+sub checkRetrieveStatus {
+    my $self = shift;
+    my $pid = shift;
+    my $client = $self->get_clientM(1);
+    my $method = SOAP::Data->name('checkRetrieveStatus')->prefix($SF_PREFIX)->uri($SF_URIM);
+
+    my $r = $client->call(
+            $method,
+            SOAP::Data->name('asyncProcessId'=>$pid),
+            $self->get_session_headerM()
+    );
+    unless ($r) {
+        die "could not call method $method";
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    return $r->valueof('//checkRetrieveStatusResponse/result');
+}
+
+
 
 #magically delicious
 1;
