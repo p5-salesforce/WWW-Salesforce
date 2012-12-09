@@ -1,5 +1,9 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.16 Dec 08 2012
+    - Element-ordering change for compatability with the 
+      Spring '13 release of salesforce.com [Dave Clendenan and Seth Miller]
+
 0.15 Dec 27 2011
     - new features for table metadata inspection [Dmitry Rivlin]
 
