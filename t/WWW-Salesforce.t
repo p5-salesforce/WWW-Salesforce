@@ -45,19 +45,19 @@ SKIP: {
     #test -- describeGlobal
     {
         my $res = $sforce->describeGlobal();
-        ok( $res, "describeGlobal" ) or diag($!);
+        ok( $res, "describeGlobal" ) or reportFailureDetails($sforce, $res);
     }
 
     #test -- describeLayout
     {
         my $res = $sforce->describeLayout( 'type' => 'Account' );
-        ok( $res, "describeLayout" ) or diag($!);
+        ok( $res, "describeLayout" ) or reportFailureDetails($sforce, $res);
     }
 
     #test -- describeSObject
     {
         my $res = $sforce->describeSObject( 'type' => 'Account' );
-        ok( $res, "describeSObject" ) or diag($!);
+        ok( $res, "describeSObject" ) or reportFailureDetails($sforce, $res);
     }
 
     # tests -- describeTabs
@@ -67,7 +67,7 @@ SKIP: {
         #test -- describeTabs
         my $res = $sforce->describeTabs();
         $passed = 1 if ( $res && $res->valueof('//result') );
-        ok( $passed, "describeTabs return" ) or diag($!);
+        ok( $passed, "describeTabs return" ) or reportFailureDetails($sforce, $res);
 
       SKIP: {
             skip( "Can't check tabs results since describeTabs failed", 2 )
@@ -81,20 +81,20 @@ SKIP: {
     #test -- getServerTimestamp
     {
         my $res = $sforce->getServerTimestamp();
-        ok( $res, "getServerTimestamp" ) or diag($!);
+        ok( $res, "getServerTimestamp" ) or reportFailureDetails($sforce, $res);
     }
 
     #test -- getUserinfo
     {
         my $res = $sforce->getUserInfo();
-        ok( $res, "getUserInfo" ) or diag($!);
+        ok( $res, "getUserInfo" ) or reportFailureDetails($sforce, $res);
     }
 
     #test -- query
     {
         my $res =
           $sforce->query( 'query' => 'select id from account', 'limit' => 5 );
-        ok( $res, "query accounts" ) or diag($!);
+        ok( $res, "query accounts" ) or reportFailureDetails($sforce, $res);
 
         #test -- queryMore
       SKIP: {
@@ -103,7 +103,7 @@ SKIP: {
             skip( "No more results to queryMore for", 1 ) unless $locator;
             $res =
               $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
-            ok( $res, "queryMore accounts" ) or diag($!);
+            ok( $res, "queryMore accounts" ) or reportFailureDetails($sforce, $res);
         }
     }
 
@@ -111,7 +111,7 @@ SKIP: {
     {
         my $res =
           $sforce->queryAll( 'query' => 'select id from account', 'limit' => 5 );
-        ok( $res, "queryAll accounts" ) or diag($!);
+        ok( $res, "queryAll accounts" ) or reportFailureDetails($sforce, $res);
 
         #test -- queryMore against queryAll
       SKIP: {
@@ -120,7 +120,7 @@ SKIP: {
             skip( "No more results to queryMore for", 1 ) unless $locator;
             $res =
               $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
-            ok( $res, "queryMore all accounts" ) or diag($!);
+            ok( $res, "queryMore all accounts" ) or reportFailureDetails($sforce, $res);
         }
     }
 
@@ -134,7 +134,7 @@ SKIP: {
             && $res->valueof('//done') eq 'true'
             && $res->valueof('//size') eq '2'
             && $res->valueof('//records') );
-        ok( $passed, "relational query" ) or diag($!);
+        ok( $passed, "relational query" ) or reportFailureDetails($sforce, $res);
 
         my @recs;
         @recs = $res->valueof('//records') if $passed;
@@ -231,7 +231,7 @@ SKIP: {
             'query' => "select id from Folder where Type = 'Document' "
         );
         $passed = 1 if ( $res && defined( $res->valueof('//records') ) );
-        ok( $passed, "query for 'Document' folder id" ) or diag($!);
+        ok( $passed, "query for 'Document' folder id" ) or reportFailureDetails($sforce, $res);
 
         #test -- get folder id
       SKIP: {
@@ -261,17 +261,8 @@ SKIP: {
                 'IsPublic'    => 'true',
             );
             $docid = $res->valueof('//id')
-            if ( $res && $res->valueof('//success') eq 'true' );
-            if($docid) {
-                pass("created new png document");
-            }
-            else {
-                fail("error creating new png document: '$!'");
-                my $failureDetails = $sforce->getErrorDetails($res);
-                diag "ERROR: $failureDetails->{message}";
-                diag "CODE: $failureDetails->{statusCode}";
-           }
-
+              if ( $res && $res->valueof('//success') eq 'true' );
+            ok( $docid, "create new png document" ) or reportFailureDetails($sforce, $res);
         }
 
         #test -- query for the document ID
@@ -288,7 +279,7 @@ SKIP: {
             $doc = $res->valueof('//records')
               if ( defined( $res->valueof('//records') )
                 && $res->valueof('//size') eq '1' );
-            ok( $doc, "query for document we just created" ) or diag($!);
+            ok( $doc, "query for document we just created" ) or reportFailureDetails($sforce, $res);
         }
 
         #test -- compare returned doc with original
@@ -306,7 +297,7 @@ SKIP: {
             $res = $sforce->delete(@toDel);
             ok( $res && $res->valueof('//success') eq 'true',
                 "delete created image" )
-              or diag($!);
+              or reportFailureDetails($sforce, $res);
         }
     }
 
@@ -320,15 +311,8 @@ SKIP: {
         my $res =
           $sforce->create( 'type' => 'Contact', 'LastName' => 'thing1' );
         $oneid = $res->valueof('//id') if $res;
-        if($oneid) {
-            pass("multi-update - create first account to test against");
-        }
-        else {
-            fail("error creating first account to test against: '$!'");
-            my $failureDetails = $sforce->getErrorDetails($res);
-            diag "ERROR: $failureDetails->{message}";
-            diag "CODE: $failureDetails->{statusCode}";
-       }
+        ok( $oneid, "multi-update - create first account to test against" )
+          or reportFailureDetails($sforce, $res);
 
         #test -- create another account
       SKIP: {
@@ -338,16 +322,8 @@ SKIP: {
             $res =
               $sforce->create( 'type' => 'Contact', 'LastName' => 'thing2' );
             $twoid = $res->valueof('//id') if $res;
-            if($twoid) {
-                pass("multi-update - create second account to test against");
-            }
-            else {
-                fail("error creating second account to test against: '$!'");
-                my $failureDetails = $sforce->getErrorDetails($res);
-                diag "ERROR: $failureDetails->{message}";
-                diag "CODE: $failureDetails->{statusCode}";
-           }
-
+            ok( $twoid, "multi-update - create second account to test against" )
+              or reportFailureDetails($sforce, $res);
         }
 
         #test -- update the two accounts above
@@ -362,7 +338,7 @@ SKIP: {
                 { id => $twoid, 'LastName' => 'thing4' }
             );
             $passed = 1 if ( $res && $res->valueof('//success') eq 'true' );
-            ok( $passed, "multi-update batch contacts" ) or diag($!);
+            ok( $passed, "multi-update batch contacts" ) or reportFailureDetails($sforce, $res);
         }
 
         #test -- check the result set of the update above
@@ -392,7 +368,7 @@ SKIP: {
             }
             ok( $res && $res->valueof('//success') eq 'true',
                 "multi-update batch deletion" )
-              or diag($!);
+              or reportFailureDetails($sforce, $res);
         }
     }
 
@@ -400,5 +376,12 @@ SKIP: {
     #use Data::Dumper;
     #print STDERR Dumper($res->valueof('//result'));
 
+}
+
+sub reportFailureDetails {
+    my ($sforce, $res) = @_;
+    my $failureDetails = $sforce->getErrorDetails($res);
+    diag "ERROR: $failureDetails->{message}";
+    diag "CODE: $failureDetails->{statusCode}";
 }
 
