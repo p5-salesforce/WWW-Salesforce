@@ -1010,6 +1010,11 @@ sub checkRetrieveStatus {
 }
 
 
+sub getErrorDetails {
+    my $self = shift;
+    my $result = shift;
+    return $result->valueof('//errors');
+}
 
 #magically delicious
 1;
@@ -1295,6 +1300,18 @@ The ids (LIST) of the object you want returned.
 The search string to be used in the query. For example, "find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name)"
 
 =back
+
+=back
+
+=item getErrorDetails( RESULT )
+
+Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+
+  {
+      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+      'message' => 'Account: bad field names on insert/update call: type'
+      ...
+  }
 
 =back
 
