@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION
 );
 
-$VERSION = '0.16';
+$VERSION = '0.18';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -100,10 +100,7 @@ sub create {
     delete( $in{'type'} );
 
     my @elems;
-    # ensure that 'type' element is first
-    push @elems, SOAP::Data->prefix('sfons')->name('type' => $type)->type(WWW::Salesforce::Constants->type($type, 'type'));
     foreach my $key ( keys %in ) {
-        next if ($key eq 'type');
         push @elems,
           SOAP::Data->prefix('sfons')->name( $key => $in{$key} )
           ->type( WWW::Salesforce::Constants->type( $type, $key ) );
@@ -765,15 +762,10 @@ sub update {
         }
 
         my @elems;
-        # ensure that 'type' element is first
-        push @elems,
-            SOAP::Data->prefix('sfons')->name('type' => $type)
-            ->type(WWW::Salesforce::Constants->type($type, 'type'));
         push @elems,
           SOAP::Data->prefix($SF_PREFIX)->name( 'Id' => $id )
           ->type('sforce:ID');
         foreach my $key ( keys %in ) {
-            next if ($key eq 'type');
             push @elems,
               SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
               ->type( WWW::Salesforce::Constants->type( $type, $key ) );
@@ -830,12 +822,7 @@ sub upsert {
         my %in = %{$_};
 
         my @elems;
-        # ensure that 'type' element is first
-        push @elems,
-            SOAP::Data->prefix('sfons')->name('type' => $type)
-            ->type(WWW::Salesforce::Constants->type($type, 'type'));
         foreach my $key ( keys %in ) {
-            next if ($key eq 'type');
             push @elems,
               SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
               ->type( WWW::Salesforce::Constants->type( $type, $key ) );
@@ -1001,6 +988,11 @@ sub checkRetrieveStatus {
 }
 
 
+sub getErrorDetails {
+    my $self = shift;
+    my $result = shift;
+    return $result->valueof('//errors');
+}
 
 #magically delicious
 1;
@@ -1286,6 +1278,18 @@ The ids (LIST) of the object you want returned.
 The search string to be used in the query. For example, "find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name)"
 
 =back
+
+=back
+
+=item getErrorDetails( RESULT )
+
+Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+
+  {
+      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+      'message' => 'Account: bad field names on insert/update call: type'
+      ...
+  }
 
 =back
 

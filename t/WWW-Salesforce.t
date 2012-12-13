@@ -4,11 +4,13 @@ use strict;
 use warnings;
 
 use Test::More tests => 31;
-
+use Data::Dumper;
 use SOAP::Lite;
 
 #test -- can we find the module?
 BEGIN { use_ok('WWW::Salesforce') }
+
+diag "Running tests against WWW::Salesforce version " . WWW::Salesforce->VERSION;
 
 # skip tests under automated testing or without user and pass
 my $automated = $ENV{AUTOMATED_TESTING};
@@ -21,6 +23,11 @@ if ( !$automated && !$ENV{SFDC_USER} &&
      !$ENV{SFDC_PASS} && !$ENV{SFDC_TOKEN} ) {
 
      $skip_reason = 'set $ENV{SFDC_USER}, $ENV{SFDC_PASS}, $ENV{SFDC_TOKEN}';
+}
+
+if ($ENV{SFDC_URL}) {
+    diag "Overriding salesforce.com API URL to $ENV{SFDC_URL}";
+    $WWW::Salesforce::SF_PROXY = $ENV{SFDC_URL};
 }
 
 SKIP: {
@@ -158,7 +165,15 @@ SKIP: {
           if ( $res
             && $res->valueof('//success') eq 'true'
             && defined( $res->valueof('//id') ) );
-        ok( $passed, "create an account" ) or diag($!);
+        if($passed) {
+            pass("created an account" );
+        }
+        else {
+            fail("error creating account: '$!'");
+            my $failureDetails = $sforce->getErrorDetails($res);
+            diag "ERROR: $failureDetails->{message}";
+            diag "CODE: $failureDetails->{statusCode}";
+       }
 
       SKIP: {
             skip(
@@ -178,7 +193,15 @@ SKIP: {
             $passed = 1
               if ( $res->valueof('//success') eq 'true'
                 && defined( $res->valueof('//id') ) );
-            ok( $passed, "update account created" ) or diag($!);
+            if($passed) {
+                pass("updated an account" );
+            }
+            else {
+                fail("error updating an account: '$!'");
+                my $failureDetails = $sforce->getErrorDetails($res);
+                diag "ERROR: $failureDetails->{message}";
+                diag "CODE: $failureDetails->{statusCode}";
+            }
 
             # test -- delete the account we just created and updated
             my @toDel = ($id);
@@ -238,8 +261,17 @@ SKIP: {
                 'IsPublic'    => 'true',
             );
             $docid = $res->valueof('//id')
-              if ( $res && $res->valueof('//success') eq 'true' );
-            ok( $docid, "create new png document" ) or diag($!);
+            if ( $res && $res->valueof('//success') eq 'true' );
+            if($docid) {
+                pass("created new png document");
+            }
+            else {
+                fail("error creating new png document: '$!'");
+                my $failureDetails = $sforce->getErrorDetails($res);
+                diag "ERROR: $failureDetails->{message}";
+                diag "CODE: $failureDetails->{statusCode}";
+           }
+
         }
 
         #test -- query for the document ID
@@ -288,8 +320,15 @@ SKIP: {
         my $res =
           $sforce->create( 'type' => 'Contact', 'LastName' => 'thing1' );
         $oneid = $res->valueof('//id') if $res;
-        ok( $oneid, "multi-update - create first account to test against" )
-          or diag($!);
+        if($oneid) {
+            pass("multi-update - create first account to test against");
+        }
+        else {
+            fail("error creating first account to test against: '$!'");
+            my $failureDetails = $sforce->getErrorDetails($res);
+            diag "ERROR: $failureDetails->{message}";
+            diag "CODE: $failureDetails->{statusCode}";
+       }
 
         #test -- create another account
       SKIP: {
@@ -299,8 +338,16 @@ SKIP: {
             $res =
               $sforce->create( 'type' => 'Contact', 'LastName' => 'thing2' );
             $twoid = $res->valueof('//id') if $res;
-            ok( $twoid, "multi-update - create second account to test against" )
-              or diag($!);
+            if($twoid) {
+                pass("multi-update - create second account to test against");
+            }
+            else {
+                fail("error creating second account to test against: '$!'");
+                my $failureDetails = $sforce->getErrorDetails($res);
+                diag "ERROR: $failureDetails->{message}";
+                diag "CODE: $failureDetails->{statusCode}";
+           }
+
         }
 
         #test -- update the two accounts above
