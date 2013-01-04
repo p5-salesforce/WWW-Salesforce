@@ -3,9 +3,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 31;
+use Test::More tests => 36;
 use Data::Dumper;
 use SOAP::Lite;
+use POSIX qw(strftime);
 
 #test -- can we find the module?
 BEGIN { use_ok('WWW::Salesforce') }
@@ -14,7 +15,9 @@ diag "Running tests against WWW::Salesforce version " . WWW::Salesforce->VERSION
 
 # skip tests under automated testing or without user and pass
 my $automated = $ENV{AUTOMATED_TESTING};
+my $start_time = time();
 my $skip_reason;
+
 if ($automated) {
     $skip_reason = 'skip live tests under $ENV{AUTOMATED_TESTING}';
 }
@@ -58,6 +61,14 @@ SKIP: {
     {
         my $res = $sforce->describeSObject( 'type' => 'Account' );
         ok( $res, "describeSObject" ) or reportFailureDetails($sforce, $res);
+    }
+
+
+    #test -- describeSObjects
+    {
+        my @types = qw(Account Lead Opportunity);
+        my $res = $sforce->describeSObjects( 'type' => \@types);
+        ok( $res, "describeSObjects: " . join(', ', @types) ) or reportFailureDetails($sforce, $res);
     }
 
     # tests -- describeTabs
@@ -213,6 +224,76 @@ SKIP: {
             );
         }
     }
+
+    # test -- create a lead and convert it to a contact
+    {
+        my $res = $sforce->create(
+            'type' => 'Lead',
+            'FirstName' => 'conversion test',
+            'LastName' => 'lead',
+            'Company' => 'Acme Inc.',
+        );
+        my $passed = 0;
+        $passed = 1
+          if ( $res
+            && $res->valueof('//success') eq 'true'
+            && defined( $res->valueof('//id') ) );
+        if($passed) {
+            pass("created a lead" );
+        }
+        else {
+            fail("error creating lead: '$!'");
+            my $failureDetails = $sforce->getErrorDetails($res);
+            diag "ERROR: $failureDetails->{message}";
+            diag "CODE: $failureDetails->{statusCode}";
+       }
+      
+       SKIP: {
+            skip(
+                "can't convert and delete new lead since the creation failed",
+                2
+            ) unless $passed;
+
+            #test -- update
+            my $id = $res->valueof('//id');
+            $res = $sforce->convertLead(
+                'leadId' => $id,
+                
+            );
+            $passed = 0;
+            $passed = 1 if ( $res->valueof('//success') eq 'true');
+            if($passed) {
+                pass("converted a lead with id '$id'" );
+                $id = $res->valueof('//accountId');
+            }
+            else {
+                fail("error converting a lead: '$!'");
+                my $failureDetails = $sforce->getErrorDetails($res);
+                diag "ERROR: $failureDetails->{message}";
+                diag "CODE: $failureDetails->{statusCode}";
+            }
+
+            # test -- delete the account we just created and updated
+            my @toDel = ($id);
+            $res = $sforce->delete(@toDel);
+            ok(
+                $res->valueof('//success') eq 'true'
+                  && defined( $res->valueof('//id') ),
+                "delete account converted"
+            );
+        }
+    }
+
+    # test -- count accounts deleted since the test-run started
+    {
+        my $res = $sforce->getDeleted(
+            'type' => 'Account',
+            'start' => strftime("%Y-%m-%dT%H:%M:%S", gmtime($start_time)),
+            'end' => strftime("%Y-%m-%dT%H:%M:%S", gmtime(time() + 60)), # ensure that (end - start) > 1 minute
+        );
+        ok( $res, "got count of delerted accounts");
+    }
+
 
     # tests -- base64 doc files
     {
