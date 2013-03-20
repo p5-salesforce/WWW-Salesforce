@@ -21,6 +21,15 @@ sub new {
 }
 
 #**************************************************************************
+# bye () 
+#   --  Ends the session for the logged-in user issuing the call. No arguments are needed.
+#**************************************************************************
+sub bye {
+    my ( $self ) = @_; 
+    $self->logout() or die 'could not logout';
+}
+
+#**************************************************************************
 # do_query( $query, [$limit] )
 #   -- returns a reference to an array of hash refs
 #**************************************************************************
@@ -164,7 +173,8 @@ sub get_field_list {
 
 #**************************************************************************
 # get_tables()
-#   -- returns an array reference to a list of tables salesforce has
+#   -- returns a reference to an array of hash references
+#   -- each hash gives the properties for each salesforce object
 #**************************************************************************
 sub get_tables {
     my ($self) = @_;
@@ -177,7 +187,7 @@ sub get_tables {
         die( $res->faultstring() );
     }
 
-    my @globals = $res->valueof('//describeGlobalResponse/result/types');
+    my @globals = $res->valueof('//describeGlobalResponse/result/sobjects');
     return \@globals;
 }
 
