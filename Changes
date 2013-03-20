@@ -1,5 +1,11 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.18 Mar 20 2013
+    - Added logout() subroutine to end session for logged in user
+    - Added bye() subroutine to simple.pm to call logout()
+    - Corrected get_tables() subroutine in simple.pm
+    - above by charlie redditt
+
 0.17 Dec 12 2012
     - Temporary reversion to 0.15 while 2013 SF api is updated
 
