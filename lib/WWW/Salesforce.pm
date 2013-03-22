@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION
 );
 
-$VERSION = '0.17';
+$VERSION = '0.18';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
