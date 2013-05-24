@@ -12,10 +12,10 @@ use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
 
 use vars qw(
-  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION
+  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION $WEB_PROXY
 );
 
-$VERSION = '0.18';
+$VERSION = '0.19';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -23,6 +23,8 @@ $SF_PREFIX      = 'sforce';
 $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
 $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
 $SF_APIVERSION  = '23.0';
+# set webproxy if firewall blocks port 443 to SF_PROXY 
+$WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
 #
 #**************************************************************************
@@ -46,8 +48,6 @@ sub convertLead {
     if ( !keys %in ) {
         die("Expected a hash of arrays.");
     }
-
-    $in{convertedStatus} ||= 'Closed - Converted'; #XXX this is not accepted in 182 - fixme
 
     #take in data to be passed in our call
     my @data;
@@ -330,8 +330,13 @@ sub get_client {
       SOAP::Lite->readable($readable)
       ->deserializer( WWW::Salesforce::Deserializer->new )
       ->serializer( WWW::Salesforce::Serializer->new )
-      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1)
-      ->proxy( $self->{'sf_serverurl'} );
+      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1);
+
+    if($WEB_PROXY) {
+        $client->proxy( $self->{'sf_serverurl'}, proxy => ['https' => $WEB_PROXY ] );
+    } else {
+        $client->proxy( $self->{'sf_serverurl'} );
+    }
     return $client;
 }
 
