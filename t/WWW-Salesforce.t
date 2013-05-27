@@ -259,7 +259,6 @@ SKIP: {
             $res = $sforce->convertLead(
                 'leadId' => $id,
                 'convertedStatus' => 'Closed - Converted',
-                
             );
             $passed = 0;
             $passed = 1 if ( $res->valueof('//success') eq 'true');

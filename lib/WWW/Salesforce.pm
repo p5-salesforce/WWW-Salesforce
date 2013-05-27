@@ -49,6 +49,8 @@ sub convertLead {
         die("Expected a hash of arrays.");
     }
 
+    $in{convertedStatus} ||= 'Closed - Converted';
+
     #take in data to be passed in our call
     my @data;
     for my $key ( keys %in ) {
