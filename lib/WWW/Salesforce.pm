@@ -12,10 +12,10 @@ use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
 
 use vars qw(
-  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION
+  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION $WEB_PROXY
 );
 
-$VERSION = '0.18';
+$VERSION = '0.19';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -23,6 +23,8 @@ $SF_PREFIX      = 'sforce';
 $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
 $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
 $SF_APIVERSION  = '23.0';
+# set webproxy if firewall blocks port 443 to SF_PROXY 
+$WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
 #
 #**************************************************************************
@@ -328,8 +330,13 @@ sub get_client {
       SOAP::Lite->readable($readable)
       ->deserializer( WWW::Salesforce::Deserializer->new )
       ->serializer( WWW::Salesforce::Serializer->new )
-      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1)
-      ->proxy( $self->{'sf_serverurl'} );
+      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1);
+
+    if($WEB_PROXY) {
+        $client->proxy( $self->{'sf_serverurl'}, proxy => ['https' => $WEB_PROXY ] );
+    } else {
+        $client->proxy( $self->{'sf_serverurl'} );
+    }
     return $client;
 }
 
@@ -1010,6 +1017,11 @@ sub checkRetrieveStatus {
 }
 
 
+sub getErrorDetails {
+    my $self = shift;
+    my $result = shift;
+    return $result->valueof('//errors');
+}
 
 #magically delicious
 1;
@@ -1295,6 +1307,18 @@ The ids (LIST) of the object you want returned.
 The search string to be used in the query. For example, "find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name)"
 
 =back
+
+=back
+
+=item getErrorDetails( RESULT )
+
+Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+
+  {
+      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+      'message' => 'Account: bad field names on insert/update call: type'
+      ...
+  }
 
 =back
 
