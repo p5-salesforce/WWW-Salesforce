@@ -11,9 +11,6 @@ use POSIX qw(strftime);
 #test -- can we find the module?
 BEGIN { use_ok('WWW::Salesforce') }
 
-diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
-        " against $WWW::Salesforce::SF_PROXY\n";
-
 # skip tests under automated testing or without user and pass
 my $automated = $ENV{AUTOMATED_TESTING};
 my $start_time = time();
@@ -30,13 +27,15 @@ if ( !$automated && !$ENV{SFDC_USER} &&
 }
 
 if ($ENV{SFDC_URL}) {
-    diag "Overriding salesforce.com API URL to $ENV{SFDC_URL}";
     $WWW::Salesforce::SF_PROXY = $ENV{SFDC_URL};
 }
 
 SKIP: {
 
-    skip $skip_reason, 30, if $skip_reason;
+    skip $skip_reason, 35, if $skip_reason;
+
+    diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
+            " against $WWW::Salesforce::SF_PROXY\n";
 
     my $user = $ENV{SFDC_USER};
     my $pass = $ENV{SFDC_PASS} . $ENV{SFDC_TOKEN};
