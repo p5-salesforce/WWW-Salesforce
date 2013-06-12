@@ -30,6 +30,9 @@ if ($ENV{SFDC_URL}) {
     $WWW::Salesforce::SF_PROXY = $ENV{SFDC_URL};
 }
 
+diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
+        " against $WWW::Salesforce::SF_PROXY\n";
+
 SKIP: {
 
     skip $skip_reason, 35, if $skip_reason;

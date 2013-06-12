@@ -1,8 +1,10 @@
 Revision history for Perl extension WWW::Salesforce.
 
-0.19 May 24 2013
+0.19 May 27 2013
     - Added web proxy support ($WWW::Salesforce::WEB_PROXY=http://my.proxy.com:8080)
     - added unit tests
+    - added the ability to override the API URL, for use within salesforce.com
+    - above by Dave Clendenan
 
 0.18 Mar 22 2013
     - Added logout() subroutine to end session for logged in user
