@@ -35,7 +35,10 @@ diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
 
 SKIP: {
 
-    skip $skip_reason, 30, if $skip_reason;
+    skip $skip_reason, 35, if $skip_reason;
+
+    diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
+            " against $WWW::Salesforce::SF_PROXY\n";
 
     my $user = $ENV{SFDC_USER};
     my $pass = $ENV{SFDC_PASS} . $ENV{SFDC_TOKEN};
