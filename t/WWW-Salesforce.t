@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 36;
+use Test::More tests => 31;
 use Data::Dumper;
 use SOAP::Lite;
 use POSIX qw(strftime);
