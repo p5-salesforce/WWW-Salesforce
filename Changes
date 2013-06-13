@@ -1,6 +1,6 @@
 Revision history for Perl extension WWW::Salesforce.
 
-0.19 May 27 2013
+0.19 Jun 12 2013
     - Added web proxy support ($WWW::Salesforce::WEB_PROXY=http://my.proxy.com:8080)
     - added unit tests
     - added the ability to override the API URL, for use within salesforce.com
