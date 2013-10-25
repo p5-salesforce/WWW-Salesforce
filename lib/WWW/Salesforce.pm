@@ -536,7 +536,7 @@ sub query {
         'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
       ->prefix($SF_PREFIX)->uri($SF_URI);
     my $client = $self->get_client();
-    my $r = $client->query( SOAP::Data->name( 'queryString' => $in{'query'} ),
+    my $r = $client->query( SOAP::Data->type( 'string' => Encode::decode_utf8($in{'query'}) ),
         $limit, $self->get_session_header() );
 
     unless ($r) {
