@@ -16,4 +16,14 @@ WriteMakefile(
     ABSTRACT_FROM => 'lib/WWW/Salesforce.pm',
     AUTHOR => 'Chase Whitener <cwhitener@gmail.com>',
     LICENSE => 'perl',
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+        resources => {
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/redhotpenguin/WWW-Salesforce.git',
+                web  => 'https://github.com/redhotpenguin/WWW-Salesforce',
+            },
+        },
+    },
 );
