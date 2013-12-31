@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use SOAP::Lite;    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
-                   #use Data::Dumper;
+use Data::Dumper;
 use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION $WEB_PROXY
 );
 
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -29,10 +29,8 @@ $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 #
 #**************************************************************************
 # new( %params )
-#   -- DEPRECATED
 #**************************************************************************
 sub new {
-    warn("WWW::Salesforce->new() is deprecated. use login()");
     return login(@_);
 }
 
@@ -1022,6 +1020,183 @@ sub getErrorDetails {
     my $result = shift;
     return $result->valueof('//errors');
 }
+
+##########
+# these methods 
+
+#**************************************************************************
+# bye () 
+#   --  Ends the session for the logged-in user issuing the call. No arguments are needed.
+#**************************************************************************
+sub bye {
+    my ( $self ) = @_; 
+    $self->logout() or die 'could not logout';
+}
+
+#**************************************************************************
+# do_query( $query, [$limit] )
+#   -- returns a reference to an array of hash refs
+#**************************************************************************
+sub do_query {
+    my ( $self, $query, $limit ) = @_;
+
+    if ( !defined $query || $query !~ m/^select/i ) {
+        die('Param1 of do_query() should be a string SQL query');
+    }
+
+    $limit = 2000
+      unless defined $limit
+          and $limit =~ m/^\d+$/
+          and $limit > 0
+          and $limit < 2001;
+
+    my @rows = ();    #to be returned
+
+    my $res = $self->query( query => $query, limit => $limit );
+    unless ($res) {
+        die "could not execute query $query, limit $limit";
+    }
+    if ( $res->fault() ) {
+        die( $res->faultstring() );
+    }
+
+    push @rows, $res->valueof('//queryResponse/result/records')
+      if ( $res->valueof('//queryResponse/result/size') > 0 );
+
+    #we get the results in batches of 2,000... so continue getting them
+    #if there are more to get
+    my $done = $res->valueof('//queryResponse/result/done');
+    my $ql   = $res->valueof('//queryResponse/result/queryLocator');
+    if ( $done eq 'false' ) {
+        push @rows, @{$self->_retrieve_queryMore($ql, $limit)};
+    }
+
+    return \@rows;
+}
+
+#**************************************************************************
+# do_queryAll( $query, [$limit] )
+#   -- returns a reference to an array of hash refs
+#**************************************************************************
+sub do_queryAll {
+    my ( $self, $query, $limit ) = @_;
+
+    if ( !defined $query || $query !~ m/^select/i ) {
+        die('Param1 of do_queryAll() should be a string SQL query');
+    }
+
+    $limit = 2000
+      unless defined $limit
+          and $limit =~ m/^\d+$/
+          and $limit > 0
+          and $limit < 2001;
+
+    my @rows = ();    #to be returned
+
+    my $res = $self->queryAll( query => $query, limit => $limit );
+    unless ($res) {
+        die "could not execute query $query, limit $limit";
+    }
+    if ( $res->fault() ) {
+        die( $res->faultstring() );
+    }
+
+    push @rows, $res->valueof('//queryAllResponse/result/records')
+      if ( $res->valueof('//queryAllResponse/result/size') > 0 );
+
+    #we get the results in batches of 2,000... so continue getting them
+    #if there are more to get
+    my $done = $res->valueof('//queryAllResponse/result/done');
+    my $ql   = $res->valueof('//queryAllResponse/result/queryLocator');
+    if ( $done eq 'false' ) {
+        push @rows, @{$self->_retrieve_queryMore($ql, $limit)};
+    }
+
+    return \@rows;
+}
+
+#**************************************************************************
+# _retrieve_queryMore
+#  -- returns the next block of a running query set. Supports do_query
+#     and do_queryAll
+#
+#**************************************************************************
+
+sub _retrieve_queryMore {
+    my ( $self, $ql, $limit ) = @_;
+
+    my $done = 'false';
+    my @results;
+
+    while ($done eq 'false') {
+        my $res = $self->queryMore(
+            queryLocator => $ql,
+            limit        => $limit
+        );
+        unless ($res) {
+            die "could not execute queryMore $ql, limit $limit";
+        }
+        if ( $res->fault() ) {
+            die( $res->faultstring() );
+        }
+        $done = $res->valueof('//queryMoreResponse/result/done');
+        $ql   = $res->valueof('//queryMoreResponse/result/queryLocator');
+
+        if ( $res->valueof('//queryMoreResponse/result/size') ) {
+            push @results, $res->valueof('//queryMoreResponse/result/records');
+        }
+    }
+
+    return \@results;
+
+}
+
+#**************************************************************************
+# get_field_list( $table_name )
+#   -- returns a ref to an array of hash refs for each field name...
+#       --field name keyed as 'name'
+#**************************************************************************
+sub get_field_list {
+    my ( $self, $table_name ) = @_;
+
+    if ( !defined $table_name || !length $table_name ) {
+        die('Param1 of get_field_list() should be a string');
+    }
+
+    my $res = $self->describeSObject( 'type' => $table_name );
+    unless ($res) {
+        die "could not describeSObject for table $table_name";
+    }
+    if ( $res->fault() ) {
+        die( $res->faultstring() );
+    }
+
+    my @fields = $res->valueof('//describeSObjectResponse/result/fields');
+    return \@fields;
+}
+
+#**************************************************************************
+# get_tables()
+#   -- returns a reference to an array of hash references
+#   -- each hash gives the properties for each salesforce object
+#**************************************************************************
+sub get_tables {
+    my ($self) = @_;
+
+    my $res = $self->describeGlobal();
+    unless ($res) {
+        die "could not describeGlobal()";
+    }
+    if ( $res->fault() ) {
+        die( $res->faultstring() );
+    }
+
+    my @globals = $res->valueof('//describeGlobalResponse/result/sobjects');
+    return \@globals;
+}
+
+
+
 
 #magically delicious
 1;

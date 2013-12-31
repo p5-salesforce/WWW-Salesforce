@@ -3,16 +3,31 @@
 use strict;
 use warnings;
 
-use Test::More tests => 36;
+use Test::More tests => 39;
 use Data::Dumper;
 use SOAP::Lite;
 use POSIX qw(strftime);
 
-#test -- can we find the module?
-BEGIN { use_ok('WWW::Salesforce') }
+BEGIN {
+    use_ok('WWW::Salesforce::Simple');
+    can_ok(
+        'WWW::Salesforce::Simple',
+        (
+            qw( new login bye do_query do_queryAll _retrieve_queryMore get_field_list get_tables )
+        )
+    );
+
+    use_ok('WWW::Salesforce');
+    can_ok(
+        'WWW::Salesforce',
+        (
+            qw( getErrorDetails checkRetrieveStatus checkAsyncStatus retrieveMetadata describeMetadata get_session_headerM get_clientM update upsert search setPassword retrieve resetPassword query queryAll queryMore getUserInfo getDeleted getUpdated getServerTimestamp get_client get_session_header logout describeLayout describeSObjects describeTabs describeSObject create delete describeGlobal convertLead new bye do_query do_queryAll _retrieve_queryMore get_field_list get_tables )
+        )
+    );
+}
 
 # skip tests under automated testing or without user and pass
-my $automated = $ENV{AUTOMATED_TESTING};
+my $automated  = $ENV{AUTOMATED_TESTING};
 my $start_time = time();
 my $skip_reason;
 
@@ -20,23 +35,26 @@ if ($automated) {
     $skip_reason = 'skip live tests under $ENV{AUTOMATED_TESTING}';
 }
 
-if ( !$automated && !$ENV{SFDC_USER} && 
-     !$ENV{SFDC_PASS} && !$ENV{SFDC_TOKEN} ) {
+if (   !$automated
+    && !$ENV{SFDC_USER}
+    && !$ENV{SFDC_PASS}
+    && !$ENV{SFDC_TOKEN} )
+{
 
-     $skip_reason = 'set $ENV{SFDC_USER}, $ENV{SFDC_PASS}, $ENV{SFDC_TOKEN}';
+    $skip_reason = 'set $ENV{SFDC_USER}, $ENV{SFDC_PASS}, $ENV{SFDC_TOKEN}';
 }
 
-if ($ENV{SFDC_URL}) {
+if ( $ENV{SFDC_URL} ) {
     $WWW::Salesforce::SF_PROXY = $ENV{SFDC_URL};
 }
-
 
 SKIP: {
 
     skip $skip_reason, 35, if $skip_reason;
 
-    diag "Running tests with WWW::Salesforce version " . WWW::Salesforce->VERSION .
-            " against $WWW::Salesforce::SF_PROXY\n";
+    diag "Running tests with WWW::Salesforce version "
+      . WWW::Salesforce->VERSION
+      . " against $WWW::Salesforce::SF_PROXY\n";
 
     my $user = $ENV{SFDC_USER};
     my $pass = $ENV{SFDC_PASS} . $ENV{SFDC_TOKEN};
@@ -49,27 +67,27 @@ SKIP: {
     #test -- describeGlobal
     {
         my $res = $sforce->describeGlobal();
-        ok( $res, "describeGlobal" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "describeGlobal" ) or reportFailureDetails( $sforce, $res );
     }
 
     #test -- describeLayout
     {
         my $res = $sforce->describeLayout( 'type' => 'Account' );
-        ok( $res, "describeLayout" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "describeLayout" ) or reportFailureDetails( $sforce, $res );
     }
 
     #test -- describeSObject
     {
         my $res = $sforce->describeSObject( 'type' => 'Account' );
-        ok( $res, "describeSObject" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "describeSObject" ) or reportFailureDetails( $sforce, $res );
     }
-
 
     #test -- describeSObjects
     {
         my @types = qw(Account Lead Opportunity);
-        my $res = $sforce->describeSObjects( 'type' => \@types);
-        ok( $res, "describeSObjects: " . join(', ', @types) ) or reportFailureDetails($sforce, $res);
+        my $res = $sforce->describeSObjects( 'type' => \@types );
+        ok( $res, "describeSObjects: " . join( ', ', @types ) )
+          or reportFailureDetails( $sforce, $res );
     }
 
     # tests -- describeTabs
@@ -79,7 +97,8 @@ SKIP: {
         #test -- describeTabs
         my $res = $sforce->describeTabs();
         $passed = 1 if ( $res && $res->valueof('//result') );
-        ok( $passed, "describeTabs return" ) or reportFailureDetails($sforce, $res);
+        ok( $passed, "describeTabs return" )
+          or reportFailureDetails( $sforce, $res );
 
       SKIP: {
             skip( "Can't check tabs results since describeTabs failed", 2 )
@@ -93,20 +112,21 @@ SKIP: {
     #test -- getServerTimestamp
     {
         my $res = $sforce->getServerTimestamp();
-        ok( $res, "getServerTimestamp" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "getServerTimestamp" )
+          or reportFailureDetails( $sforce, $res );
     }
 
     #test -- getUserinfo
     {
         my $res = $sforce->getUserInfo();
-        ok( $res, "getUserInfo" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "getUserInfo" ) or reportFailureDetails( $sforce, $res );
     }
 
     #test -- query
     {
         my $res =
           $sforce->query( 'query' => 'select id from account', 'limit' => 5 );
-        ok( $res, "query accounts" ) or reportFailureDetails($sforce, $res);
+        ok( $res, "query accounts" ) or reportFailureDetails( $sforce, $res );
 
         #test -- queryMore
       SKIP: {
@@ -115,24 +135,30 @@ SKIP: {
             skip( "No more results to queryMore for", 1 ) unless $locator;
             $res =
               $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
-            ok( $res, "queryMore accounts" ) or reportFailureDetails($sforce, $res);
+            ok( $res, "queryMore accounts" )
+              or reportFailureDetails( $sforce, $res );
         }
     }
 
     #test -- queryAll
     {
-        my $res =
-          $sforce->queryAll( 'query' => 'select id from account', 'limit' => 5 );
-        ok( $res, "queryAll accounts" ) or reportFailureDetails($sforce, $res);
+        my $res = $sforce->queryAll(
+            'query' => 'select id from account',
+            'limit' => 5
+        );
+        ok( $res, "queryAll accounts" )
+          or reportFailureDetails( $sforce, $res );
 
         #test -- queryMore against queryAll
       SKIP: {
-            my $locator = $res->valueof('//queryAllResponse/result/queryLocator')
+            my $locator =
+              $res->valueof('//queryAllResponse/result/queryLocator')
               if $res;
             skip( "No more results to queryMore for", 1 ) unless $locator;
             $res =
               $sforce->queryMore( 'queryLocator' => $locator, 'limit' => 5 );
-            ok( $res, "queryMore all accounts" ) or reportFailureDetails($sforce, $res);
+            ok( $res, "queryMore all accounts" )
+              or reportFailureDetails( $sforce, $res );
         }
     }
 
@@ -146,7 +172,8 @@ SKIP: {
             && $res->valueof('//done') eq 'true'
             && $res->valueof('//size') eq '2'
             && $res->valueof('//records') );
-        ok( $passed, "relational query" ) or reportFailureDetails($sforce, $res);
+        ok( $passed, "relational query" )
+          or reportFailureDetails( $sforce, $res );
 
         my @recs;
         @recs = $res->valueof('//records') if $passed;
@@ -177,15 +204,15 @@ SKIP: {
           if ( $res
             && $res->valueof('//success') eq 'true'
             && defined( $res->valueof('//id') ) );
-        if($passed) {
-            pass("created an account" );
+        if ($passed) {
+            pass("created an account");
         }
         else {
             fail("error creating account: '$!'");
             my $failureDetails = $sforce->getErrorDetails($res);
             diag "ERROR: $failureDetails->{message}";
             diag "CODE: $failureDetails->{statusCode}";
-       }
+        }
 
       SKIP: {
             skip(
@@ -205,8 +232,8 @@ SKIP: {
             $passed = 1
               if ( $res->valueof('//success') eq 'true'
                 && defined( $res->valueof('//id') ) );
-            if($passed) {
-                pass("updated an account" );
+            if ($passed) {
+                pass("updated an account");
             }
             else {
                 fail("error updating an account: '$!'");
@@ -229,42 +256,41 @@ SKIP: {
     # test -- create a lead and convert it to a contact
     {
         my $res = $sforce->create(
-            'type' => 'Lead',
+            'type'      => 'Lead',
             'FirstName' => 'conversion test',
-            'LastName' => 'lead',
-            'Company' => 'Acme Inc.',
+            'LastName'  => 'lead',
+            'Company'   => 'Acme Inc.',
         );
         my $passed = 0;
         $passed = 1
           if ( $res
             && $res->valueof('//success') eq 'true'
             && defined( $res->valueof('//id') ) );
-        if($passed) {
-            pass("created a lead" );
+        if ($passed) {
+            pass("created a lead");
         }
         else {
             fail("error creating lead: '$!'");
             my $failureDetails = $sforce->getErrorDetails($res);
             diag "ERROR: $failureDetails->{message}";
             diag "CODE: $failureDetails->{statusCode}";
-       }
-      
-       SKIP: {
-            skip(
-                "can't convert and delete new lead since the creation failed",
-                2
-            ) unless $passed;
+        }
+
+      SKIP: {
+            skip( "can't convert and delete new lead since the creation failed",
+                2 )
+              unless $passed;
 
             #test -- update
             my $id = $res->valueof('//id');
             $res = $sforce->convertLead(
-                'leadId' => $id,
+                'leadId'          => $id,
                 'convertedStatus' => 'Closed - Converted',
             );
             $passed = 0;
-            $passed = 1 if ( $res->valueof('//success') eq 'true');
-            if($passed) {
-                pass("converted a lead with id '$id'" );
+            $passed = 1 if ( $res->valueof('//success') eq 'true' );
+            if ($passed) {
+                pass("converted a lead with id '$id'");
                 $id = $res->valueof('//accountId');
             }
             else {
@@ -288,13 +314,13 @@ SKIP: {
     # test -- count accounts deleted since the test-run started
     {
         my $res = $sforce->getDeleted(
-            'type' => 'Account',
-            'start' => strftime("%Y-%m-%dT%H:%M:%S", gmtime($start_time)),
-            'end' => strftime("%Y-%m-%dT%H:%M:%S", gmtime(time() + 60)), # ensure that (end - start) > 1 minute
+            'type'  => 'Account',
+            'start' => strftime( "%Y-%m-%dT%H:%M:%S", gmtime($start_time) ),
+            'end'   => strftime( "%Y-%m-%dT%H:%M:%S", gmtime( time() + 60 ) )
+            ,    # ensure that (end - start) > 1 minute
         );
-        ok( $res, "got count of delerted accounts");
+        ok( $res, "got count of delerted accounts" );
     }
-
 
     # tests -- base64 doc files
     {
@@ -313,7 +339,8 @@ SKIP: {
             'query' => "select id from Folder where Type = 'Document' "
         );
         $passed = 1 if ( $res && defined( $res->valueof('//records') ) );
-        ok( $passed, "query for 'Document' folder id" ) or reportFailureDetails($sforce, $res);
+        ok( $passed, "query for 'Document' folder id" )
+          or reportFailureDetails( $sforce, $res );
 
         #test -- get folder id
       SKIP: {
@@ -344,7 +371,8 @@ SKIP: {
             );
             $docid = $res->valueof('//id')
               if ( $res && $res->valueof('//success') eq 'true' );
-            ok( $docid, "create new png document" ) or reportFailureDetails($sforce, $res);
+            ok( $docid, "create new png document" )
+              or reportFailureDetails( $sforce, $res );
         }
 
         #test -- query for the document ID
@@ -361,7 +389,8 @@ SKIP: {
             $doc = $res->valueof('//records')
               if ( defined( $res->valueof('//records') )
                 && $res->valueof('//size') eq '1' );
-            ok( $doc, "query for document we just created" ) or reportFailureDetails($sforce, $res);
+            ok( $doc, "query for document we just created" )
+              or reportFailureDetails( $sforce, $res );
         }
 
         #test -- compare returned doc with original
@@ -379,7 +408,7 @@ SKIP: {
             $res = $sforce->delete(@toDel);
             ok( $res && $res->valueof('//success') eq 'true',
                 "delete created image" )
-              or reportFailureDetails($sforce, $res);
+              or reportFailureDetails( $sforce, $res );
         }
     }
 
@@ -394,7 +423,7 @@ SKIP: {
           $sforce->create( 'type' => 'Contact', 'LastName' => 'thing1' );
         $oneid = $res->valueof('//id') if $res;
         ok( $oneid, "multi-update - create first account to test against" )
-          or reportFailureDetails($sforce, $res);
+          or reportFailureDetails( $sforce, $res );
 
         #test -- create another account
       SKIP: {
@@ -405,7 +434,7 @@ SKIP: {
               $sforce->create( 'type' => 'Contact', 'LastName' => 'thing2' );
             $twoid = $res->valueof('//id') if $res;
             ok( $twoid, "multi-update - create second account to test against" )
-              or reportFailureDetails($sforce, $res);
+              or reportFailureDetails( $sforce, $res );
         }
 
         #test -- update the two accounts above
@@ -420,7 +449,8 @@ SKIP: {
                 { id => $twoid, 'LastName' => 'thing4' }
             );
             $passed = 1 if ( $res && $res->valueof('//success') eq 'true' );
-            ok( $passed, "multi-update batch contacts" ) or reportFailureDetails($sforce, $res);
+            ok( $passed, "multi-update batch contacts" )
+              or reportFailureDetails( $sforce, $res );
         }
 
         #test -- check the result set of the update above
@@ -450,7 +480,7 @@ SKIP: {
             }
             ok( $res && $res->valueof('//success') eq 'true',
                 "multi-update batch deletion" )
-              or reportFailureDetails($sforce, $res);
+              or reportFailureDetails( $sforce, $res );
         }
     }
 
@@ -461,7 +491,7 @@ SKIP: {
 }
 
 sub reportFailureDetails {
-    my ($sforce, $res) = @_;
+    my ( $sforce, $res ) = @_;
     my $failureDetails = $sforce->getErrorDetails($res);
     diag "ERROR: $failureDetails->{message}";
     diag "CODE: $failureDetails->{statusCode}";

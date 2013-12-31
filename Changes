@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.21 Dec 30 2013
+    - make all WWW::Salesforce::Simple methods available in WWW::Salesforce
+
 0.20 Jun 18 2013
     - Clean up diagnostic messages in unit tests
     - above by Dave Clendenan
