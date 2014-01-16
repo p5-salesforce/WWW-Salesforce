@@ -806,7 +806,7 @@ sub update {
         for my $key ( @fieldsToNull ) {
             push @elems,
             SOAP::Data->prefix($SF_PREFIX)->name( fieldsToNull => $key )
-            ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            ->type( 'xsd:string' );
         }
         push @updates,
           SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
@@ -874,7 +874,7 @@ sub upsert {
         for my $key ( @fieldsToNull ) {
             push @elems,
             SOAP::Data->prefix($SF_PREFIX)->name( fieldsToNull => $key )
-            ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            ->type( 'xsd:string' );
         }
         push @updates,
           SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
