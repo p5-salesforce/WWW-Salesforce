@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW::Salesforce.
 
+    - typo fixes [github/dsteinbrunner]
+    - Force UTF8 to not be base64-encoded [github/pc-coholic]
+
 0.21 Dec 30 2013
     - make all WWW::Salesforce::Simple methods available in WWW::Salesforce
 
