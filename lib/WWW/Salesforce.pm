@@ -1282,7 +1282,7 @@ The following are the accepted input parameters:
 
 =item create( HASH )
 
-Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your arganization.
+Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
 The hash must contain the 'type' key in order to identify the type of the record to add.
 
 Returns a SOAP::Lite object.  Success of this operation can be gleaned from
@@ -1361,7 +1361,7 @@ The hash must contain the 'Id' key in order to identify the record to update.
 
 Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
 
-This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specificies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
+This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
 
 Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
 
@@ -1483,7 +1483,7 @@ A user Id.
 
 =item fields
 
-A comma delimitted list of field name you want retrieved.
+A comma delimited list of field name you want retrieved.
 
 =item type
 
