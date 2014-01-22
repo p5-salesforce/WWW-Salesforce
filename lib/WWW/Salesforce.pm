@@ -789,13 +789,24 @@ sub update {
         }
 
         my @elems;
+        my @fieldsToNull;
         push @elems,
           SOAP::Data->prefix($SF_PREFIX)->name( 'Id' => $id )
           ->type('sforce:ID');
         foreach my $key ( keys %in ) {
+            if ( !defined $in{$key} ) {
+                push @fieldsToNull, $key;
+            }
+            else {
+                push @elems,
+                  SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
+                  ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            }
+        }
+        for my $key ( @fieldsToNull ) {
             push @elems,
-              SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
-              ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            SOAP::Data->prefix($SF_PREFIX)->name( fieldsToNull => $key )
+            ->type( 'xsd:string' );
         }
         push @updates,
           SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
@@ -849,10 +860,21 @@ sub upsert {
         my %in = %{$_};
 
         my @elems;
+        my @fieldsToNull;
         foreach my $key ( keys %in ) {
+            if ( !defined $in{$key} ) {
+                push @fieldsToNull, $key;
+            }
+            else {
+                push @elems,
+                SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
+                ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            }
+        }
+        for my $key ( @fieldsToNull ) {
             push @elems,
-              SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
-              ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+            SOAP::Data->prefix($SF_PREFIX)->name( fieldsToNull => $key )
+            ->type( 'xsd:string' );
         }
         push @updates,
           SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
