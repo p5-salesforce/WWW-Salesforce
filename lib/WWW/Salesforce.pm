@@ -1244,6 +1244,10 @@ This class provides a simple abstraction layer between SOAP::Lite and Salesforce
 
 =head1 CONSTRUCTORS
 
+=head2 new( HASH )
+
+Synonym for C<login>
+
 =head2 login( HASH )
 
 The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
@@ -1263,6 +1267,10 @@ The password for the user indicated by C<username>.
 =back
 
 =head1 METHODS
+
+=head2 bye()
+
+Synonym for C<logout>.
 
 =head2 convertLead( HASH )
 
@@ -1310,6 +1318,10 @@ The type of the object you wish to have described.
 
 =back
 
+=head2 describeMetadata()
+
+Get some metadata info about your instance.
+
 =head2 describeSObject( HASH )
 
 Describes metadata (field list and object properties) for the specified object.
@@ -1321,6 +1333,14 @@ Describes metadata (field list and object properties) for the specified object.
 The type of the object you wish to have described.
 
 =back
+
+=head2 describeSObjects( type => ['Account','Contact','CustomObject__c'] )
+
+An array based version of C<describeSObject> to describe many objects.
+
+=head2 describeTabs()
+
+Use the C<describeTabs> call to obtain information about the standard and custom apps to which the logged-in user has access. The C<describeTabs> call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
 
 =head2 getDeleted( HASH )
 
@@ -1387,6 +1407,10 @@ Retrieves personal information for the user associated with the current session.
 A user ID
 
 =back
+
+=head2 logout()
+
+Logs out of your current session.
 
 =head2 query( HASH )
 
