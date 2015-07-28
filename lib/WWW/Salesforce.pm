@@ -23,7 +23,7 @@ $SF_PREFIX      = 'sforce';
 $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
 $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
 $SF_APIVERSION  = '23.0';
-# set webproxy if firewall blocks port 443 to SF_PROXY 
+# set webproxy if firewall blocks port 443 to SF_PROXY
 $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
 #
@@ -181,17 +181,17 @@ sub describeGlobal {
 #**************************************************************************
 sub logout {
     my $self = shift;
-    
+
     my $client = $self->get_client(1);
     my $method =
       SOAP::Data->name("logout")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call( $method, $self->get_session_header() );
     unless ($r) {
         die "could not call method $method";
-    }    
+    }
     if ( $r->fault() ) {
         die( $r->faultstring() );
-    }    
+    }
     return $r;
 }
 
@@ -548,7 +548,7 @@ sub query {
 
 #**************************************************************************
 # queryAll( %in )  --API
-#   -- runs a query against salesforce including archived and deleted 
+#   -- runs a query against salesforce including archived and deleted
 #      objects in its return
 #**************************************************************************
 sub queryAll {
@@ -1044,14 +1044,14 @@ sub getErrorDetails {
 }
 
 ##########
-# these methods 
+# these methods
 
 #**************************************************************************
-# bye () 
+# bye ()
 #   --  Ends the session for the logged-in user issuing the call. No arguments are needed.
 #**************************************************************************
 sub bye {
-    my ( $self ) = @_; 
+    my ( $self ) = @_;
     $self->logout() or die 'could not logout';
 }
 
@@ -1218,11 +1218,10 @@ sub get_tables {
 }
 
 
-
-
-#magically delicious
 1;
 __END__
+
+=encoding utf8
 
 =head1 NAME
 
@@ -1243,11 +1242,9 @@ WWW::Salesforce - this class provides a simple abstraction layer between SOAP::L
 
 This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
 
-=head2 METHODS
+=head1 CONSTRUCTORS
 
-=over 
-
-=item login( HASH )
+=head2 login( HASH )
 
 The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
 
@@ -1265,7 +1262,9 @@ The password for the user indicated by C<username>.
 
 =back
 
-=item convertLead( HASH )
+=head1 METHODS
+
+=head2 convertLead( HASH )
 
 The C<convertLead> method returns an object of type SOAP::SOM if the login attempt was successful, and 0 otherwise.
 
@@ -1280,7 +1279,7 @@ The following are the accepted input parameters:
 
 =back
 
-=item create( HASH )
+=head2 create( HASH )
 
 Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
 The hash must contain the 'type' key in order to identify the type of the record to add.
@@ -1290,118 +1289,39 @@ the envelope result.
 
     $r->envelope->{Body}->{createResponse}->{result}->{success};
 
-=over
-
-=back
-
-=item delete( ARRAY )
+=head2 delete( ARRAY )
 
 Deletes one or more individual objects from your organization's data. This subroutine takes as input an array of SCALAR values, where each SCALAR is an sObjectId.
 
-=over
+=head2 describeGlobal()
 
-=back
+Retrieves a list of available objects for your organization's data.
 
-=item query( HASH )
+=head2 describeLayout( HASH )
 
-Executes a query against the specified object and returns data that matches the specified criteria.
-
-=over 
-
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=item queryAll( HASH )
-
-Executes a query against the specified object and returns data that matches the
-specified criteria including archived and deleted objects.
-
-=over 
-
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=item queryMore( HASH )
-
-Retrieves the next batch of objects from a C<query> or C<queryAll>.
-
-=over 
-
-=item queryLocator
-
-The handle or string returned by C<query>. This identifies the result set and cursor for fetching the next set of rows from a result set.
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=item update(type => $type, HASHREF [, HASHREF ...])
-
-Updates one or more existing objects in your organization's data. This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User) and one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
-
-The hash must contain the 'Id' key in order to identify the record to update.
-
-=item upsert(type => $type, key => $key, HASHREF [, HASHREF ...])
-
-Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
-
-This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
-
-Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
-
-=item getServerTimestamp()
-
-Retrieves the current system timestamp (GMT) from the sforce Web service.
-
-=item getUserInfo( HASH )
-
-Retrieves personal information for the user associated with the current session.
-
-=over
-
-=item user
-
-A user ID
-
-=back
-
-=item getUpdated( HASH )
-
-Retrieves the list of individual objects that have been updated (added or changed) within the given timespan for the specified object.
+Describes metadata about a given page layout, including layouts for edit and display-only views and record type mappings.
 
 =over
 
 =item type
 
-Identifies the type of the object you wish to find updates for.
-
-=item start
-
-A string identifying the start date/time for the query
-
-=item end
-
-A string identifying the end date/time for the query
+The type of the object you wish to have described.
 
 =back
 
-=item getDeleted( HASH )
+=head2 describeSObject( HASH )
+
+Describes metadata (field list and object properties) for the specified object.
+
+=over
+
+=item type
+
+The type of the object you wish to have described.
+
+=back
+
+=head2 getDeleted( HASH )
 
 Retrieves the list of individual objects that have been deleted within the given timespan for the specified object.
 
@@ -1421,51 +1341,102 @@ A string identifying the end date/time for the query
 
 =back
 
-=item describeSObject( HASH )
+=head2 getErrorDetails( RESULT )
 
-Describes metadata (field list and object properties) for the specified object.
+Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+
+  {
+      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+      'message' => 'Account: bad field names on insert/update call: type'
+      ...
+  }
+
+=head2 getServerTimestamp()
+
+Retrieves the current system timestamp (GMT) from the sforce Web service.
+
+=head2 getUpdated( HASH )
+
+Retrieves the list of individual objects that have been updated (added or changed) within the given timespan for the specified object.
 
 =over
 
 =item type
 
-The type of the object you wish to have described.
+Identifies the type of the object you wish to find updates for.
+
+=item start
+
+A string identifying the start date/time for the query
+
+=item end
+
+A string identifying the end date/time for the query
 
 =back
 
-=item describeLayout( HASH )
+=head2 getUserInfo( HASH )
 
-Describes metadata about a given page layout, including layouts for edit and display-only views and record type mappings.
+Retrieves personal information for the user associated with the current session.
 
 =over
 
-=item type
+=item user
 
-The type of the object you wish to have described.
+A user ID
 
 =back
 
-=item describeGlobal()
+=head2 query( HASH )
 
-Retrieves a list of available objects for your organization's data.
-
-=item setPassword( HASH )
-
-Sets the specified user's password to the specified value.
+Executes a query against the specified object and returns data that matches the specified criteria.
 
 =over
 
-=item userId
+=item query
 
-A user Id.
+The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
 
-=item password
+=item limit
 
-The new password to assign to the user identified by C<userId>.
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
 
 =back
 
-=item resetPassword( HASH )
+=head2 queryAll( HASH )
+
+Executes a query against the specified object and returns data that matches the
+specified criteria including archived and deleted objects.
+
+=over
+
+=item query
+
+The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
+=head2 queryMore( HASH )
+
+Retrieves the next batch of objects from a C<query> or C<queryAll>.
+
+=over
+
+=item queryLocator
+
+The handle or string returned by C<query>. This identifies the result set and cursor for fetching the next set of rows from a result set.
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
+=head2 resetPassword( HASH )
 
 Changes a user's password to a server-generated value.
 
@@ -1477,7 +1448,7 @@ A user Id.
 
 =back
 
-=item retrieve( HASH )
+=head2 retrieve( HASH )
 
 =over
 
@@ -1495,7 +1466,7 @@ The ids (LIST) of the object you want returned.
 
 =back
 
-=item search( HASH )
+=head2 search( HASH )
 
 =over
 
@@ -1505,20 +1476,35 @@ The search string to be used in the query. For example, "find {4159017000} in ph
 
 =back
 
+=head2 setPassword( HASH )
+
+Sets the specified user's password to the specified value.
+
+=over
+
+=item userId
+
+A user Id.
+
+=item password
+
+The new password to assign to the user identified by C<userId>.
+
 =back
 
-=item getErrorDetails( RESULT )
+=head2 update(type => $type, HASHREF [, HASHREF ...])
 
-Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+Updates one or more existing objects in your organization's data. This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User) and one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
 
-  {
-      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
-      'message' => 'Account: bad field names on insert/update call: type'
-      ...
-  }
+The hash must contain the 'Id' key in order to identify the record to update.
 
-=back
+=head2 upsert(type => $type, key => $key, HASHREF [, HASHREF ...])
 
+Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
+
+This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
+
+Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
 
 =head1 EXAMPLES
 
@@ -1543,7 +1529,7 @@ resolve your issue online.
 
 =head1 CAVEATS
 
-The C<describeSObjects> and C<describeTabs> API calls are not yet complete. These will be 
+The C<describeSObjects> and C<describeTabs> API calls are not yet complete. These will be
 completed in future releases.
 
 Not enough test cases built into the install yet.  More to be added.
@@ -1574,7 +1560,7 @@ Maintaining this module and working on development version.
 Michael Blanco -
 Finding and fixing some bugs.
 
-Garth Webb - 
+Garth Webb -
 Finding and fixing bugs. Adding some additional features and more constant types.
 
 Ron Hess -
@@ -1584,7 +1570,7 @@ to the build. Providing a lot of other help.
 Tony Stubblebine -
 Finding a bug and providing a fix.
 
-Jun Shimizu - 
+Jun Shimizu -
 Providing more to the WWW::Salesforce::Constants module
 and submitting fixes for various other bugs.
 
@@ -1605,4 +1591,3 @@ This library is free software and may be distributed under the same terms
 as perl itself.
 
 =cut
-
