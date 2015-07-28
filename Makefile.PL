@@ -14,16 +14,21 @@ WriteMakefile(
         'SOAP::Lite'    => 0.68,
     },
     ABSTRACT_FROM => 'lib/WWW/Salesforce.pm',
-    AUTHOR => 'Chase Whitener <cwhitener@gmail.com>',
-    LICENSE => 'perl',
+    AUTHOR => 'Fred Moyer <fred@redhotpenguin.com>',
+    LICENSE => 'artistic_2',
     META_MERGE => {
         'meta-spec' => { version => 2 },
         resources => {
+            license => 'http://www.opensource.org/licenses/artistic-license-2.0',
+            homepage => 'https://github.com/redhotpenguin/WWW-Salesforce',
+            bugtracker => 'https://github.com/redhotpenguin/WWW-Salesforce/issues',
             repository => {
                 type => 'git',
                 url  => 'https://github.com/redhotpenguin/WWW-Salesforce.git',
                 web  => 'https://github.com/redhotpenguin/WWW-Salesforce',
             },
         },
+        no_index => {directory => ['t',]},
     },
+    TEST => {TESTS => 't/*.t'},
 );

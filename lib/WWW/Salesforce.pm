@@ -1295,7 +1295,8 @@ Deletes one or more individual objects from your organization's data. This subro
 
 =head2 describeGlobal()
 
-Retrieves a list of available objects for your organization's data.
+Retrieves a list of available objects for your organization's data.  You can then iterate through this list and use C<describeSObject()> to obtain metadata about individual objects.
+This method calls the Salesforce L<describeGlobal method|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describeglobal.htm>.
 
 =head2 describeLayout( HASH )
 
