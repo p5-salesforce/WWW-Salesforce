@@ -8,3 +8,5 @@ lib/WWW/Salesforce/Deserializer.pm
 lib/WWW/Salesforce/Serializer.pm
 lib/WWW/Salesforce/Simple.pm
 t/WWW-Salesforce.t
+t/pod-coverage.t
+t/pod.t

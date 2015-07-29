@@ -1,5 +1,12 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.23
+    - fixed some POD errors
+    - reformatted =item to =head2 in POD
+    - alphabetized methods in POD
+    - more clearly documented some features closing RT 48274
+    - Added some pod and pod coverage tests
+
 0.22 Jan 23 2014
     - typo fixes [github/dsteinbrunner]
     - Force UTF8 to not be base64-encoded [github/pc-coholic]
@@ -27,7 +34,7 @@ Revision history for Perl extension WWW::Salesforce.
     - Temporary reversion to 0.15 while 2013 SF api is updated
 
 0.16 Dec 08 2012
-    - Element-ordering change for compatability with the 
+    - Element-ordering change for compatability with the
       Spring 2013 release of salesforce.com [Dave Clendenan and Seth Miller]
 
 0.15 Dec 27 2011
@@ -55,7 +62,7 @@ Revision history for Perl extension WWW::Salesforce.
 0.11 Thurs April 23 15:00:00 2009
     - Fixed a problem with some documentation and code discrepencies (thanks to Michael Blanco)
     - Fixed a small code problem in the retrieve function
-    
+
 0.10 Sun March 1 04:30:00  2009
     - fixed the Makefile to disable automated tests since they'll fail for lack of user/pass
     - Added META.yml
@@ -115,4 +122,3 @@ Revision history for Perl extension WWW::Salesforce.
 0.01  Tue Jan 17 10:34:55 2006
     - original version; created by h2xs 1.23 with options
         -X -n WWW::Salesforce
-
