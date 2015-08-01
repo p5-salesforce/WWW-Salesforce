@@ -6,4 +6,4 @@ plan skip_all => 'set TEST_POD to enable this test (developer only!)'
         unless $ENV{TEST_POD};
 
 plan tests => 1;
-pod_coverage_ok( "ITI::Paycor" );
+pod_coverage_ok( "WWW::Salesforce" );
