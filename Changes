@@ -1,11 +1,16 @@
 Revision history for Perl extension WWW::Salesforce.
 
-0.23
+0.24 Aug 1 2015
+    - https://github.com/redhotpenguin/WWW-Salesforce/pull/20
+
+0.23 Aug 1 2015
     - fixed some POD errors
     - reformatted =item to =head2 in POD
     - alphabetized methods in POD
     - more clearly documented some features closing RT 48274
     - Added some pod and pod coverage tests
+    - add stub pod for coverage tests
+    - move pod close to code
 
 0.22 Jan 23 2014
     - typo fixes [github/dsteinbrunner]

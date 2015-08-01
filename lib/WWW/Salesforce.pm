@@ -15,7 +15,7 @@ use vars qw(
   $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION $WEB_PROXY
 );
 
-$VERSION = '0.22';
+$VERSION = '0.24';
 
 $SF_PROXY       = 'https://www.salesforce.com/services/Soap/u/8.0';
 $SF_URI         = 'urn:partner.soap.sforce.com';
@@ -26,19 +26,124 @@ $SF_APIVERSION  = '23.0';
 # set webproxy if firewall blocks port 443 to SF_PROXY
 $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
-#
-#**************************************************************************
-# new( %params )
-#**************************************************************************
+
+=encoding utf8
+
+=head1 NAME
+
+WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
+
+=head1 SYNOPSIS
+
+    use WWW::Salesforce;
+    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
+                                                password => 'bar' ); };
+    die "Could not login to SFDC: $@" if $@;
+
+    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
+    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
+    # by eval'ing and handling any exceptions that occur.
+
+=head1 DESCRIPTION
+
+This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
+
+=head1 CONSTRUCTORS
+
+=head2 new( HASH )
+
+Synonym for C<login>
+
+=cut
+
 sub new {
     return login(@_);
 }
 
-#**************************************************************************
-# convertLead()     -- API
-#   -- Converts a Lead into an Account, Contact, or (optionally)
-#       an Opportunity
-#**************************************************************************
+
+=head2 login( HASH )
+
+The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
+
+The following are the accepted input parameters:
+
+=over
+
+=item username
+
+A Salesforce.com username.
+
+=item password
+
+The password for the user indicated by C<username>.
+
+=back
+
+=cut
+
+sub login {
+    my $class = shift;
+    my (%params) = @_;
+
+    unless ( defined $params{'username'} and length $params{'username'} ) {
+        die("WWW::Salesforce::login() requires a username");
+    }
+    unless ( defined $params{'password'} and length $params{'password'} ) {
+        die("WWW::Salesforce::login() requires a password");
+    }
+    my $self = {
+        sf_user      => $params{'username'},
+        sf_pass      => $params{'password'},
+        sf_serverurl => $SF_PROXY,
+        sf_sid       => undef,                 #session ID
+    };
+    $self->{'sf_serverurl'} = $params{'serverurl'}
+      if ( $params{'serverurl'} && length( $params{'serverurl'} ) );
+    bless $self, $class;
+
+    my $client = $self->get_client();
+    my $r      = $client->login(
+        SOAP::Data->name( 'username' => $self->{'sf_user'} ),
+        SOAP::Data->name( 'password' => $self->{'sf_pass'} )
+    );
+    unless ($r) {
+        die sprintf( "could not login, user %s, pass %s",
+            $self->{'sf_user'}, $self->{'sf_pass'} );
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+
+    $self->{'sf_sid'}       = $r->valueof('//loginResponse/result/sessionId');
+    $self->{'sf_uid'}       = $r->valueof('//loginResponse/result/userId');
+    $self->{'sf_serverurl'} = $r->valueof('//loginResponse/result/serverUrl');
+    $self->{'sf_metadataServerUrl'} = $r->valueof('//loginResponse/result/metadataServerUrl');
+    return $self;
+}
+
+
+
+=head1 METHODS
+
+=head2 convertLead( HASH )
+
+The C<convertLead> method returns an object of type SOAP::SOM if the login attempt was successful, and 0 otherwise.
+
+Converts a Lead into an Account, Contact, or (optionally) an Opportunity
+
+The following are the accepted input parameters:
+
+=over
+
+=item %hash_of_array_references
+
+    leadId => [ 2345, 5678, ],
+    contactId => [ 9876, ],
+
+=back
+
+=cut
+
 sub convertLead {
     my $self = shift;
     my (%in) = @_;
@@ -80,10 +185,18 @@ sub convertLead {
     return $r;
 }
 
-#**************************************************************************
-# create()     -- API
-#   -- Adds one or more new individual objects to your organization's data
-#**************************************************************************
+=head2 create( HASH )
+
+Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
+The hash must contain the 'type' key in order to identify the type of the record to add.
+
+Returns a SOAP::Lite object.  Success of this operation can be gleaned from
+the envelope result.
+
+    $r->envelope->{Body}->{createResponse}->{result}->{success};
+
+=cut
+
 sub create {
     my $self = shift;
     my (%in) = @_;
@@ -120,10 +233,14 @@ sub create {
     return $r;
 }
 
-#**************************************************************************
-# delete()     -- API
-#   -- Deletes one or more individual objects from your org's data
-#**************************************************************************
+
+=head2 delete( ARRAY )
+
+Deletes one or more individual objects from your organization's data.
+This subroutine takes as input an array of SCALAR values, where each SCALAR is an sObjectId.
+
+=cut
+
 sub delete {
     my $self = shift;
 
@@ -152,10 +269,15 @@ sub delete {
     return $r;
 }
 
-#**************************************************************************
-# describeGlobal()     -- API
-#   -- Retrieves a list of available objects for your organization's data
-#**************************************************************************
+
+=head2 describeGlobal()
+
+Retrieves a list of available objects for your organization's data.
+You can then iterate through this list and use C<describeSObject()> to obtain metadata about individual objects.
+This method calls the Salesforce L<describeGlobal method|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describeglobal.htm>.
+
+=cut
+
 sub describeGlobal {
     my $self = shift;
 
@@ -173,33 +295,20 @@ sub describeGlobal {
     return $r;
 }
 
-#**************************************************************************
-# logout()     -- API
-#   -- Ends the session for the logged-in user issuing the call. No arguments are needed.
-#   Useful to avoid hitting the limit of ten open sessions per login.
-#   http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_logout.htm
-#**************************************************************************
-sub logout {
-    my $self = shift;
+=head2 describeLayout( HASH )
 
-    my $client = $self->get_client(1);
-    my $method =
-      SOAP::Data->name("logout")->prefix($SF_PREFIX)->uri($SF_URI);
-    my $r = $client->call( $method, $self->get_session_header() );
-    unless ($r) {
-        die "could not call method $method";
-    }
-    if ( $r->fault() ) {
-        die( $r->faultstring() );
-    }
-    return $r;
-}
+Describes metadata about a given page layout, including layouts for edit and display-only views and record type mappings.
 
-#**************************************************************************
-# describeLayout()     -- API
-#   -- retrieve information about the layout (presentation of data to
-#       users) for a given object type.
-#**************************************************************************
+=over
+
+=item type
+
+The type of the object you wish to have described.
+
+=back
+
+=cut
+
 sub describeLayout {
     my $self = shift;
     my (%in) = @_;
@@ -225,11 +334,21 @@ sub describeLayout {
     return $r;
 }
 
-#**************************************************************************
-# describeSObject()     -- API
-#   -- Describes metadata (field list and object properties) for the
-#       specified object.
-#**************************************************************************
+
+=head2 describeSObject( HASH )
+
+Describes metadata (field list and object properties) for the specified object.
+
+=over
+
+=item type
+
+The type of the object you wish to have described.
+
+=back
+
+=cut
+
 sub describeSObject {
     my $self = shift;
     my (%in) = @_;
@@ -257,12 +376,12 @@ sub describeSObject {
     return $r;
 }
 
-#**************************************************************************
-# describeSObjects()        --API
-#   -- An array-based version of describeSObject; describes metadata
-#       (field list and object properties) for the specified object
-#       or array of objects.
-#**************************************************************************
+=head2 describeSObjects( type => ['Account','Contact','CustomObject__c'] )
+
+An array based version of describeSObject; describes metadata (field list and object properties) for the specified object or array of objects.
+
+=cut
+
 sub describeSObjects {
     my $self = shift;
     my %in   = @_;
@@ -293,12 +412,12 @@ sub describeSObjects {
     return $r;
 }
 
-#**************************************************************************
-# describeTabs()        --API
-#   -- returns information about the standard apps and custom apps, if
-#       any, available for the user who sends the call, including the list
-#       of tabs defined for each app.
-#**************************************************************************
+=head2 describeTabs()
+
+Use the C<describeTabs> call to obtain information about the standard and custom apps to which the logged-in user has access. The C<describeTabs> call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
+
+=cut
+
 sub describeTabs {
     my $self   = shift;
     my $client = $self->get_client(1);
@@ -315,10 +434,12 @@ sub describeTabs {
     return $r;
 }
 
-#**************************************************************************
-# get_client( $readable )
-#   -- get a client
-#**************************************************************************
+=head2 get_client( $readable )
+
+Get a client
+
+=cut
+
 sub get_client {
     my $self = shift;
     my ($readable) = @_;
@@ -338,10 +459,13 @@ sub get_client {
     return $client;
 }
 
-#**************************************************************************
-# get_session_header( $mustunderstand )
-#   -- gets the session header
-#**************************************************************************
+
+=head2 get_session_header()
+
+Gets the session header
+
+=cut
+
 sub get_session_header {
     my ($self) = @_;
     return SOAP::Header->name( 'SessionHeader' =>
@@ -349,11 +473,29 @@ sub get_session_header {
       ->uri($SF_URI)->prefix($SF_PREFIX);
 }
 
-#**************************************************************************
-# getDeleted() -- API
-#   -- Retrieves the list of individual objects that have been deleted
-#       within the given timespan for the specified object.
-#**************************************************************************
+
+=head2 getDeleted( HASH )
+
+Retrieves the list of individual objects that have been deleted within the given timespan for the specified object.
+
+=over
+
+=item type
+
+Identifies the type of the object you wish to find deletions for.
+
+=item start
+
+A string identifying the start date/time for the query
+
+=item end
+
+A string identifying the end date/time for the query
+
+=back
+
+=cut
+
 sub getDeleted {
     my $self = shift;
     my (%in) = @_;
@@ -391,10 +533,13 @@ sub getDeleted {
     return $r;
 }
 
-#**************************************************************************
-# getServerTimestamp() -- API
-#   -- Retrieves the current system timestamp (GMT) from the Web service.
-#**************************************************************************
+
+=head2 getServerTimestamp()
+
+Retrieves the current system timestamp (GMT) from the sforce Web service.
+
+=cut
+
 sub getServerTimestamp {
     my $self   = shift;
     my $client = $self->get_client(1);
@@ -408,12 +553,28 @@ sub getServerTimestamp {
     return $r;
 }
 
-#**************************************************************************
-# getUpdated()  --API
-#   -- Retrieves the list of individual objects that have been updated
-#       (added or changed) within the given timespan for the specified
-#       object.
-#**************************************************************************
+=head2 getUpdated( HASH )
+
+Retrieves the list of individual objects that have been updated (added or changed) within the given timespan for the specified object.
+
+=over
+
+=item type
+
+Identifies the type of the object you wish to find updates for.
+
+=item start
+
+A string identifying the start date/time for the query
+
+=item end
+
+A string identifying the end date/time for the query
+
+=back
+
+=cut
+
 sub getUpdated {
     my $self = shift;
     my (%in) = @_;
@@ -451,11 +612,21 @@ sub getUpdated {
     return $r;
 }
 
-#**************************************************************************
-# getUserInfo()  --API
-#   -- Retrieves personal information for the user associated with the
-#       current session.
-#**************************************************************************
+
+=head2 getUserInfo( HASH )
+
+Retrieves personal information for the user associated with the current session.
+
+=over
+
+=item user
+
+A user ID
+
+=back
+
+=cut
+
 sub getUserInfo {
     my $self   = shift;
     my $client = $self->get_client(1);
@@ -469,54 +640,50 @@ sub getUserInfo {
     return $r;
 }
 
-#**************************************************************************
-# login( %params ) --API
-#   -- logs a user into Sforce and returns a WWW::Salesforce object or 0
-#**************************************************************************
-sub login {
-    my $class = shift;
-    my (%params) = @_;
+=head2 logout()
 
-    unless ( defined $params{'username'} and length $params{'username'} ) {
-        die("WWW::Salesforce::login() requires a username");
-    }
-    unless ( defined $params{'password'} and length $params{'password'} ) {
-        die("WWW::Salesforce::login() requires a password");
-    }
-    my $self = {
-        sf_user      => $params{'username'},
-        sf_pass      => $params{'password'},
-        sf_serverurl => $SF_PROXY,
-        sf_sid       => undef,                 #session ID
-    };
-    $self->{'sf_serverurl'} = $params{'serverurl'}
-      if ( $params{'serverurl'} && length( $params{'serverurl'} ) );
-    bless $self, $class;
+Ends the session for the logged-in user issuing the call. No arguments are needed.
+Useful to avoid hitting the limit of ten open sessions per login.
+http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_logout.htm
 
-    my $client = $self->get_client();
-    my $r      = $client->login(
-        SOAP::Data->name( 'username' => $self->{'sf_user'} ),
-        SOAP::Data->name( 'password' => $self->{'sf_pass'} )
-    );
+=cut
+
+sub logout {
+    my $self = shift;
+
+    my $client = $self->get_client(1);
+    my $method =
+      SOAP::Data->name("logout")->prefix($SF_PREFIX)->uri($SF_URI);
+    my $r = $client->call( $method, $self->get_session_header() );
     unless ($r) {
-        die sprintf( "could not login, user %s, pass %s",
-            $self->{'sf_user'}, $self->{'sf_pass'} );
+        die "could not call method $method";
     }
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
-
-    $self->{'sf_sid'}       = $r->valueof('//loginResponse/result/sessionId');
-    $self->{'sf_uid'}       = $r->valueof('//loginResponse/result/userId');
-    $self->{'sf_serverurl'} = $r->valueof('//loginResponse/result/serverUrl');
-    $self->{'sf_metadataServerUrl'} = $r->valueof('//loginResponse/result/metadataServerUrl');
-    return $self;
+    return $r;
 }
 
-#**************************************************************************
-# query( %in )  --API
-#   -- runs a query against salesforce
-#**************************************************************************
+
+
+=head2 query( HASH )
+
+Executes a query against the specified object and returns data that matches the specified criteria.
+
+=over
+
+=item query
+
+The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
+=cut
+
 sub query {
     my $self = shift;
     my (%in) = @_;
@@ -546,11 +713,26 @@ sub query {
     return $r;
 }
 
-#**************************************************************************
-# queryAll( %in )  --API
-#   -- runs a query against salesforce including archived and deleted
-#      objects in its return
-#**************************************************************************
+
+=head2 queryAll( HASH )
+
+Executes a query against the specified object and returns data that matches the
+specified criteria including archived and deleted objects.
+
+=over
+
+=item query
+
+The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
+=cut
+
 sub queryAll {
     my $self = shift;
     my (%in) = @_;
@@ -580,10 +762,25 @@ sub queryAll {
     return $r;
 }
 
-#**************************************************************************
-# queryMore()  --API
-#   -- query from where you last left off
-#**************************************************************************
+
+=head2 queryMore( HASH )
+
+Retrieves the next batch of objects from a C<query> or C<queryAll>.
+
+=over
+
+=item queryLocator
+
+The handle or string returned by C<query>. This identifies the result set and cursor for fetching the next set of rows from a result set.
+
+=item limit
+
+This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+
+=back
+
+=cut
+
 sub queryMore {
     my $self = shift;
     my (%in) = @_;
@@ -614,10 +811,20 @@ sub queryMore {
     return $r;
 }
 
-#**************************************************************************
-# resetPassword()  --API
-#   -- reset your password
-#**************************************************************************
+=head2 resetPassword( HASH )
+
+Changes a user's password to a server-generated value.
+
+=over
+
+=item userId
+
+A user Id.
+
+=back
+
+=cut
+
 sub resetPassword {
     my $self = shift;
     my (%in) = @_;
@@ -645,10 +852,26 @@ sub resetPassword {
     return $r;
 }
 
-#**************************************************************************
-# retrieve()  --API
-#   -- Retrieves one or more objects based on the specified object IDs.
-#**************************************************************************
+=head2 retrieve( HASH )
+
+=over
+
+=item fields
+
+A comma delimited list of field name you want retrieved.
+
+=item type
+
+The type of the object being queried.
+
+=item ids
+
+The ids (LIST) of the object you want returned.
+
+=back
+
+=cut
+
 sub retrieve {
     my $self = shift;
     my (%in) = @_;
@@ -695,10 +918,19 @@ sub retrieve {
     return $r;
 }
 
-#**************************************************************************
-# search()  --API
-#   -- Executes a text search in your organization's data.
-#**************************************************************************
+
+=head2 search( HASH )
+
+=over
+
+=item searchString
+
+The search string to be used in the query. For example, "find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name)"
+
+=back
+
+=cut
+
 sub search {
     my $self = shift;
     my (%in) = @_;
@@ -723,10 +955,25 @@ sub search {
     return $r;
 }
 
-#**************************************************************************
-# setPassword()  --API
-#   -- Sets the specified user's password to the specified value.
-#**************************************************************************
+
+=head2 setPassword( HASH )
+
+Sets the specified user's password to the specified value.
+
+=over
+
+=item userId
+
+A user Id.
+
+=item password
+
+The new password to assign to the user identified by C<userId>.
+
+=back
+
+=cut
+
 sub setPassword {
     my $self = shift;
     my (%in) = @_;
@@ -759,10 +1006,15 @@ sub setPassword {
     return $r;
 }
 
-#**************************************************************************
-# update()  --API
-#   -- Updates one or more existing objects in your organization's data.
-#**************************************************************************
+
+=head2 update(type => $type, HASHREF [, HASHREF ...])
+
+Updates one or more existing objects in your organization's data. This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User) and one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
+
+The hash must contain the 'Id' key in order to identify the record to update.
+
+=cut
+
 sub update {
     my $self = shift;
 
@@ -830,11 +1082,17 @@ sub update {
     return $r;
 }
 
-#**************************************************************************
-# upsert()  --API
-#   -- Creates new objects and updates existing objects;
-#      uses a custom field to determine the presence of existing objects.
-#**************************************************************************
+
+=head2 upsert(type => $type, key => $key, HASHREF [, HASHREF ...])
+
+Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
+
+This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
+
+Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
+
+=cut
+
 sub upsert {
     my $self = shift;
     my ( $spec, $type, $extern, $name, @sobjects ) = @_;
@@ -898,10 +1156,10 @@ sub upsert {
     return $r;
 }
 
-#
-# NEW Methods
-#
-###########################
+
+=head2 get_clientM( $readable )
+
+=cut
 
 sub get_clientM {
     my $self = shift;
@@ -918,6 +1176,10 @@ sub get_clientM {
     return $client;
 }
 
+=head2 get_session_headerM()
+
+=cut
+
 sub get_session_headerM {
     my ($self) = @_;
     return SOAP::Header->name( 'SessionHeader' =>
@@ -925,6 +1187,12 @@ sub get_session_headerM {
       ->uri($SF_URIM)->prefix($SF_PREFIX);
 
 }
+
+=head2 describeMetadata()
+
+Get some metadata info about your instance.
+
+=cut
 
 sub describeMetadata {
     my $self = shift;
@@ -943,6 +1211,11 @@ sub describeMetadata {
     }
     return $r->valueof('//describeMetadataResponse/result');
 }
+
+
+=head2 retrieveMetadata()
+
+=cut
 
 sub retrieveMetadata {
     my $self = shift;
@@ -982,6 +1255,12 @@ SOAP::Data->name('retrieveRequest'=>
     $r = $r->valueof('//retrieveResponse/result');
     return $r;
 }
+
+
+=head2 checkAsyncStatus( $pid )
+
+=cut
+
 sub checkAsyncStatus {
     my $self = shift;
     my $pid = shift;
@@ -1016,6 +1295,11 @@ sub checkAsyncStatus {
     return;
 }
 
+
+=head2 checkRetrieveStatus( $pid )
+
+=cut
+
 sub checkRetrieveStatus {
     my $self = shift;
     my $pid = shift;
@@ -1037,28 +1321,46 @@ sub checkRetrieveStatus {
 }
 
 
+=head2 getErrorDetails( RESULT )
+
+Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
+
+  {
+      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+      'message' => 'Account: bad field names on insert/update call: type'
+      ...
+  }
+
+=cut
+
 sub getErrorDetails {
     my $self = shift;
     my $result = shift;
     return $result->valueof('//errors');
 }
 
-##########
-# these methods
 
-#**************************************************************************
-# bye ()
-#   --  Ends the session for the logged-in user issuing the call. No arguments are needed.
-#**************************************************************************
+=head2 bye()
+
+Synonym for C<logout>.
+
+Ends the session for the logged-in user issuing the call. No arguments are needed.
+Returns a reference to an array of hash refs
+
+=cut
+
 sub bye {
     my ( $self ) = @_;
     $self->logout() or die 'could not logout';
 }
 
-#**************************************************************************
-# do_query( $query, [$limit] )
-#   -- returns a reference to an array of hash refs
-#**************************************************************************
+
+=head2 do_query( $query, [$limit] )
+
+Returns a reference to an array of hash refs
+
+=cut
+
 sub do_query {
     my ( $self, $query, $limit ) = @_;
 
@@ -1096,10 +1398,13 @@ sub do_query {
     return \@rows;
 }
 
-#**************************************************************************
-# do_queryAll( $query, [$limit] )
-#   -- returns a reference to an array of hash refs
-#**************************************************************************
+
+=head2 do_queryAll( $query, [$limit] )
+
+Returns a reference to an array of hash refs
+
+=cut
+
 sub do_queryAll {
     my ( $self, $query, $limit ) = @_;
 
@@ -1173,11 +1478,13 @@ sub _retrieve_queryMore {
 
 }
 
-#**************************************************************************
-# get_field_list( $table_name )
-#   -- returns a ref to an array of hash refs for each field name...
-#       --field name keyed as 'name'
-#**************************************************************************
+=head2 get_field_list( $table_name )
+
+Returns a ref to an array of hash refs for each field name
+Field name keyed as 'name'
+
+=cut
+
 sub get_field_list {
     my ( $self, $table_name ) = @_;
 
@@ -1197,11 +1504,14 @@ sub get_field_list {
     return \@fields;
 }
 
-#**************************************************************************
-# get_tables()
-#   -- returns a reference to an array of hash references
-#   -- each hash gives the properties for each salesforce object
-#**************************************************************************
+
+=head2 get_tables()
+
+Returns a reference to an array of hash references
+Each hash gives the properties for each salesforce object
+
+=cut
+
 sub get_tables {
     my ($self) = @_;
 
@@ -1221,315 +1531,6 @@ sub get_tables {
 1;
 __END__
 
-=encoding utf8
-
-=head1 NAME
-
-WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
-
-=head1 SYNOPSIS
-
-    use WWW::Salesforce;
-    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
-                                                password => 'bar' ); };
-    die "Could not login to SFDC: $@" if $@;
-
-    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
-    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
-    # by eval'ing and handling any exceptions that occur.
-
-=head1 DESCRIPTION
-
-This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
-
-=head1 CONSTRUCTORS
-
-=head2 new( HASH )
-
-Synonym for C<login>
-
-=head2 login( HASH )
-
-The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and 0 otherwise. Upon a successful login, the sessionId is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
-
-The following are the accepted input parameters:
-
-=over
-
-=item username
-
-A Salesforce.com username.
-
-=item password
-
-The password for the user indicated by C<username>.
-
-=back
-
-=head1 METHODS
-
-=head2 bye()
-
-Synonym for C<logout>.
-
-=head2 convertLead( HASH )
-
-The C<convertLead> method returns an object of type SOAP::SOM if the login attempt was successful, and 0 otherwise.
-
-The following are the accepted input parameters:
-
-=over
-
-=item %hash_of_array_references
-
-    leadId => [ 2345, 5678, ],
-    contactId => [ 9876, ],
-
-=back
-
-=head2 create( HASH )
-
-Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
-The hash must contain the 'type' key in order to identify the type of the record to add.
-
-Returns a SOAP::Lite object.  Success of this operation can be gleaned from
-the envelope result.
-
-    $r->envelope->{Body}->{createResponse}->{result}->{success};
-
-=head2 delete( ARRAY )
-
-Deletes one or more individual objects from your organization's data. This subroutine takes as input an array of SCALAR values, where each SCALAR is an sObjectId.
-
-=head2 describeGlobal()
-
-Retrieves a list of available objects for your organization's data.  You can then iterate through this list and use C<describeSObject()> to obtain metadata about individual objects.
-This method calls the Salesforce L<describeGlobal method|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describeglobal.htm>.
-
-=head2 describeLayout( HASH )
-
-Describes metadata about a given page layout, including layouts for edit and display-only views and record type mappings.
-
-=over
-
-=item type
-
-The type of the object you wish to have described.
-
-=back
-
-=head2 describeMetadata()
-
-Get some metadata info about your instance.
-
-=head2 describeSObject( HASH )
-
-Describes metadata (field list and object properties) for the specified object.
-
-=over
-
-=item type
-
-The type of the object you wish to have described.
-
-=back
-
-=head2 describeSObjects( type => ['Account','Contact','CustomObject__c'] )
-
-An array based version of C<describeSObject> to describe many objects.
-
-=head2 describeTabs()
-
-Use the C<describeTabs> call to obtain information about the standard and custom apps to which the logged-in user has access. The C<describeTabs> call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
-
-=head2 getDeleted( HASH )
-
-Retrieves the list of individual objects that have been deleted within the given timespan for the specified object.
-
-=over
-
-=item type
-
-Identifies the type of the object you wish to find deletions for.
-
-=item start
-
-A string identifying the start date/time for the query
-
-=item end
-
-A string identifying the end date/time for the query
-
-=back
-
-=head2 getErrorDetails( RESULT )
-
-Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
-
-  {
-      'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
-      'message' => 'Account: bad field names on insert/update call: type'
-      ...
-  }
-
-=head2 getServerTimestamp()
-
-Retrieves the current system timestamp (GMT) from the sforce Web service.
-
-=head2 getUpdated( HASH )
-
-Retrieves the list of individual objects that have been updated (added or changed) within the given timespan for the specified object.
-
-=over
-
-=item type
-
-Identifies the type of the object you wish to find updates for.
-
-=item start
-
-A string identifying the start date/time for the query
-
-=item end
-
-A string identifying the end date/time for the query
-
-=back
-
-=head2 getUserInfo( HASH )
-
-Retrieves personal information for the user associated with the current session.
-
-=over
-
-=item user
-
-A user ID
-
-=back
-
-=head2 logout()
-
-Logs out of your current session.
-
-=head2 query( HASH )
-
-Executes a query against the specified object and returns data that matches the specified criteria.
-
-=over
-
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=head2 queryAll( HASH )
-
-Executes a query against the specified object and returns data that matches the
-specified criteria including archived and deleted objects.
-
-=over
-
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=head2 queryMore( HASH )
-
-Retrieves the next batch of objects from a C<query> or C<queryAll>.
-
-=over
-
-=item queryLocator
-
-The handle or string returned by C<query>. This identifies the result set and cursor for fetching the next set of rows from a result set.
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
-
-=head2 resetPassword( HASH )
-
-Changes a user's password to a server-generated value.
-
-=over
-
-=item userId
-
-A user Id.
-
-=back
-
-=head2 retrieve( HASH )
-
-=over
-
-=item fields
-
-A comma delimited list of field name you want retrieved.
-
-=item type
-
-The type of the object being queried.
-
-=item ids
-
-The ids (LIST) of the object you want returned.
-
-=back
-
-=head2 search( HASH )
-
-=over
-
-=item searchString
-
-The search string to be used in the query. For example, "find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name)"
-
-=back
-
-=head2 setPassword( HASH )
-
-Sets the specified user's password to the specified value.
-
-=over
-
-=item userId
-
-A user Id.
-
-=item password
-
-The new password to assign to the user identified by C<userId>.
-
-=back
-
-=head2 update(type => $type, HASHREF [, HASHREF ...])
-
-Updates one or more existing objects in your organization's data. This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User) and one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
-
-The hash must contain the 'Id' key in order to identify the record to update.
-
-=head2 upsert(type => $type, key => $key, HASHREF [, HASHREF ...])
-
-Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
-
-This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforces own internal unique ID.  This key can be any of Salesforces default fields or an custom field marked as an external key.
-
-Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
 
 =head1 EXAMPLES
 
@@ -1604,7 +1605,7 @@ Byrne Reese wrote the original Salesforce module.
 
 =head1 COPYRIGHT
 
-Copyright 2010 Fred Moyer, All rights reserved.
+Copyright 2010-2015 Fred Moyer, All rights reserved.
 
 Copyright 2005-2007 Chase Whitener.
 
