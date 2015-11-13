@@ -1,5 +1,9 @@
 Revision history for Perl extension WWW::Salesforce.
 
+0.25 Nov 12 2015
+    - change login URL from www.salesforce.com to login.salesforce.com [github/dclendenan]
+      - www.salesforce.com will no longer be an API login endpoint as of Jan 1 2016
+
 0.24 Aug 1 2015
     - https://github.com/redhotpenguin/WWW-Salesforce/pull/20
 
