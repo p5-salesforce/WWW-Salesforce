@@ -18,13 +18,6 @@ install:
 - sudo apt-get -qq install libcrypt-ssleay-perl
 - sudo apt-get -qq install libsoap-lite-perl
 - sudo apt-get -qq install libtest-pod-coverage-perl
-# install latest LCOV (1.9 was failing)
-- cd ${TRAVIS_BUILD_DIR}
-- g++ --version
-before_script:
-- cd ${TRAVIS_BUILD_DIR}
-# init coverage to 0 (optional)
-- lcov --directory . --zerocounters
 script:
 - cd ${TRAVIS_BUILD_DIR}
 # Check that this works this way
