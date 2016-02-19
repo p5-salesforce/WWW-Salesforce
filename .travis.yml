@@ -1,26 +1,23 @@
-sudo: required
-dist: trusty
-language: cpp
-compiler:
-- gcc
-before_install:
-# for gcc with C++11 support
-- sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-- sudo apt-get -qq update
+language: perl
+perl:
+  - "5.22"
+  - "5.20"
+  - "5.18"
+  - "5.16"
+  - "5.14"
+  - "5.12"
+  - "5.10"
+  - "5.8"
+
+env:
+  - "TEST_POD=1"
+
 install:
-# install GTest and GMock
-- sudo apt-get -qq install libgtest-dev
-- "cd /usr/src/gtest && sudo cmake . && sudo cmake --build . && sudo mv libg* /usr/local/lib/ ; cd -"
-- sudo apt-get -qq install google-mock
-- "cd /usr/src/gmock && sudo cmake . && sudo cmake --build . && sudo mv libg* /usr/local/lib/ ; cd -"
-- sudo apt-get -qq install libtest-simple-perl
-- sudo apt-get -qq install libtest-harness-perl
-- sudo apt-get -qq install libcrypt-ssleay-perl
-- sudo apt-get -qq install libsoap-lite-perl
-- sudo apt-get -qq install libtest-pod-coverage-perl
-script:
-- cd ${TRAVIS_BUILD_DIR}
-# Check that this works this way
-- perl Makefile.PL
-- make
-- TEST_POD=1 make test
+  - "cpanm -n Test::More Test::Simple Test::Harness Test::Pod::Coverage"
+  - "cpanm -n Crypt::SSLeay"
+  - "cpanm -n SOAP::Lite"
+  - "cpanm -n Time::Piece"
+  - "cpanm -n --installdeps ."
+
+notifications:
+  email: false
