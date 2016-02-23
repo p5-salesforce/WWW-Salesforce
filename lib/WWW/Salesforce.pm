@@ -5,7 +5,9 @@ use 5.008001;
 use strict;
 use warnings;
 
+use POSIX qw(strftime);
 use SOAP::Lite;    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
+use Time::Local;
 use Data::Dumper;
 use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
@@ -471,6 +473,45 @@ sub get_session_header {
     return SOAP::Header->name( 'SessionHeader' =>
           \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
       ->uri($SF_URI)->prefix($SF_PREFIX);
+}
+
+
+=head2 get_session_id()
+
+Gets the SalesForce SID
+
+=cut
+
+sub get_session_id {
+    my ($self) = @_;
+
+    return $self->{sf_sid};
+}
+
+
+=head2 get_user_id()
+
+Gets the SalesForce UID
+
+=cut
+
+sub get_user_id {
+    my ($self) = @_;
+
+    return $self->{sf_uid};
+}
+
+
+=head2 get_username()
+
+Gets the SalesForce Username
+
+=cut
+
+sub get_username {
+    my ($self) = @_;
+
+    return $self->{sf_user};
 }
 
 
@@ -1004,6 +1045,25 @@ sub setPassword {
         die( $r->faultstring() );
     }
     return $r;
+}
+
+
+=head2 sf_date(INT)
+
+Converts a time in Epoch seconds to the date format that SalesForce likes
+
+=cut
+
+sub sf_date {
+    my $self = shift;
+    my $secs = shift || time;
+
+    my @now = localtime($secs);
+    my $tz_diff = Time::Local::timegm(@now) - Time::Local::timelocal(@now);
+    my $tz_hour = int($tz_diff / 60 / 60);
+
+    return strftime('%Y-%m-%dT%H:%M:%S', @now) . ($tz_hour >= 0 ? '+' : '-') .
+            sprintf("%02d:%02d",abs($tz_hour),int($tz_diff / 60 % 60));
 }
 
 
@@ -1605,7 +1665,7 @@ Byrne Reese wrote the original Salesforce module.
 
 =head1 COPYRIGHT
 
-Copyright 2010-2015 Fred Moyer, All rights reserved.
+Copyright 2010-2016 Fred Moyer, All rights reserved.
 
 Copyright 2005-2007 Chase Whitener.
 

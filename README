@@ -184,6 +184,15 @@ DESCRIPTION
     describeGlobal()
         Retrieves a list of available objects for your organization's data.
 
+    get_session_id()
+        Gets the SalesForce SID
+
+    get_user_id()
+        Gets the SalesForce UID
+
+    get_username()
+        Gets the SalesForce Username
+
     setPassword( HASH )
         Sets the specified user's password to the specified value.
 
@@ -198,6 +207,10 @@ DESCRIPTION
 
         userId
             A user Id.
+
+    sf_date( INT )
+
+        Converts a time in Epoch seconds to the date format that SalesForce likes
 
     retrieve( HASH )
 
@@ -277,7 +290,7 @@ AUTHORS
     original Salesforce module.
 
 COPYRIGHT
-    Copyright 2010 Fred Moyer, All rights reserved.
+    Copyright 2010- 2016 Fred Moyer, All rights reserved.
 
     Copyright 2005-2007 Chase Whitener.
 
