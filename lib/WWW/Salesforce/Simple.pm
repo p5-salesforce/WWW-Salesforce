@@ -40,7 +40,7 @@ This class inherits all the methods from L<WWW::Salesforce> and adds the followi
 =head2 new( %parameters )
 
 Handles creating new Salesforce objects as well as the login process
-to use the salesforce objects. 
+to use the salesforce objects.
 
 =head2 do_query( $sql_query_string )
 
@@ -88,7 +88,7 @@ reference to an array of strings representing each table name.
     foreach my $field ( @{ $res } ) {
         print $field->{'Id'} . "\n";
     }
-    print "Found " . scalar @{$res} . " results\n";    
+    print "Found " . scalar @{$res} . " results\n";
 
 =head2 do_queryAll( $query )
 
@@ -99,7 +99,7 @@ reference to an array of strings representing each table name.
     foreach my $field ( @{ $res } ) {
         print $field->{'Id'} . "\n";
     }
-    print "Found " . scalar @{$res} . " results\n";    
+    print "Found " . scalar @{$res} . " results\n";
 
 =head2 get_field_list( $table_name )
 

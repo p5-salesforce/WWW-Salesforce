@@ -496,4 +496,3 @@ sub reportFailureDetails {
     diag "ERROR: $failureDetails->{message}";
     diag "CODE: $failureDetails->{statusCode}";
 }
-

@@ -39,4 +39,3 @@ foreach my $place (@places) {
     is(WWW::Salesforce->sf_date($test_time), $sf_now,
       'Checking ' . $place->{name} . ' time');
 }
-
