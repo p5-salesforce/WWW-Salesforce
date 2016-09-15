@@ -16,13 +16,14 @@ WriteMakefile(
         'ExtUtils::MakeMaker' => 0,
     },
     BUILD_REQUIRES => {
-        'Test::More' => 0,
+        'Test::More' => 0.88,
         'Test::Pod' => 0,
         'Test::Pod::Coverage' => 0,
     },
     PREREQ_PM         => {
         'Crypt::SSLeay' => 0.56,
         'SOAP::Lite'    => 0.68,
+        'DateTime'      => 1.36,
     },
     META_MERGE => {
         'meta-spec' => { version => 2 },

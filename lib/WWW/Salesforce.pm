@@ -5,9 +5,8 @@ use 5.008001;
 use strict;
 use warnings;
 
-use POSIX qw(strftime);
 use SOAP::Lite;    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
-use Time::Local;
+use DateTime;
 use Data::Dumper;
 use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
@@ -1048,7 +1047,7 @@ sub setPassword {
 }
 
 
-=head2 sf_date(INT)
+=head2 sf_date
 
 Converts a time in Epoch seconds to the date format that SalesForce likes
 
@@ -1057,13 +1056,9 @@ Converts a time in Epoch seconds to the date format that SalesForce likes
 sub sf_date {
     my $self = shift;
     my $secs = shift || time;
-
-    my @now = localtime($secs);
-    my $tz_diff = Time::Local::timegm(@now) - Time::Local::timelocal(@now);
-    my $tz_hour = int($tz_diff / 60 / 60);
-
-    return strftime('%Y-%m-%dT%H:%M:%S', @now) . ($tz_hour >= 0 ? '+' : '-') .
-            sprintf("%02d:%02d",abs($tz_hour),int($tz_diff / 60 % 60));
+    my $dt = DateTime->from_epoch(epoch=>$secs);
+    $dt->set_time_zone('local');
+    return $dt->strftime(q(%FT%T.%3N%z));
 }
 
 
