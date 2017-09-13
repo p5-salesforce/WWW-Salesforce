@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+    - Get rid of the last of the 'use vars' pragma
+    - Fix errant version number
 
 0.300     2017-09-13
     - Fixed some spelling errors

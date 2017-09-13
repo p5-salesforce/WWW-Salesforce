@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use SOAP::Lite;
 
-our $VERSION = '0.300';
+our $VERSION = '0.301';
 $VERSION = eval $VERSION;
 
 use base qw( SOAP::Deserializer );

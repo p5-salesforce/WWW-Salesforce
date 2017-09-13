@@ -10,20 +10,17 @@ use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
 
-use vars qw(
-  $VERSION $SF_URI $SF_PREFIX $SF_PROXY $SF_SOBJECT_URI $SF_URIM $SF_APIVERSION $WEB_PROXY
-);
+our $VERSION = '0.301';
+$VERSION = eval $VERSION;
 
-$VERSION = '0.25';
-
-$SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/8.0';
-$SF_URI         = 'urn:partner.soap.sforce.com';
-$SF_PREFIX      = 'sforce';
-$SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
-$SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
-$SF_APIVERSION  = '23.0';
+our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/8.0';
+our $SF_URI         = 'urn:partner.soap.sforce.com';
+our $SF_PREFIX      = 'sforce';
+our $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
+our $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
+our $SF_APIVERSION  = '23.0';
 # set webproxy if firewall blocks port 443 to SF_PROXY
-$WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
+our $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
 
 =encoding utf8
