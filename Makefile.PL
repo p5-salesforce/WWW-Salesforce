@@ -16,7 +16,7 @@ my %WriteMakefileArgs = (
     "ExtUtils::MakeMaker" => 0
   },
   "DISTNAME" => "WWW-Salesforce",
-  "LICENSE" => "artistic_2",
+  "LICENSE" => "perl",
   "MIN_PERL_VERSION" => "5.008001",
   "NAME" => "WWW::Salesforce",
   "PREREQ_PM" => {
