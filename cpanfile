@@ -14,6 +14,12 @@ on 'build' => sub {
 
 
 on 'test' => sub {
+    requires 'strict';
+    requires 'warnings';
+    requires 'DateTime';
+    requires 'File::Spec';
+    requires 'POSIX';
+    requires 'SOAP::Lite';
     requires 'Test::More' => '0.88';
 };
 

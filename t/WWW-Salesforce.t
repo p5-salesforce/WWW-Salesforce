@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Test::More tests => 39;
-use Data::Dumper;
+# use Data::Dumper;
 use SOAP::Lite;
 use POSIX qw(strftime);
 

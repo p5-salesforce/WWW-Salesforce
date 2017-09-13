@@ -1,4 +1,12 @@
-Revision history for Perl extension WWW::Salesforce.
+Revision history for Perl extension {{$dist->name}}
+
+{{$NEXT}}
+    - Fixed some spelling errors
+    - Made IO::Socket::SSL v1.94 a prereq (TLS v1.1)
+    - Added a cpanfile to maintain prereqs
+    - Added the license file to the dist
+    - Got rid of the 'use vars' pragma
+    - Moved to Dist::Zilla for maintenance
 
 0.25 Nov 12 2015
     - change login URL from www.salesforce.com to login.salesforce.com [github/dclendenan]
