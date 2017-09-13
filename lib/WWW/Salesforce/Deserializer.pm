@@ -4,9 +4,10 @@ use strict;
 use warnings;
 use SOAP::Lite;
 
-use vars qw( @ISA );
+our $VERSION = '0.300';
+$VERSION = eval $VERSION;
 
-@ISA = qw( SOAP::Deserializer );
+use base qw( SOAP::Deserializer );
 use strict 'refs';
 
 #**************************************************************************
@@ -90,5 +91,4 @@ sub as_Array {
     return \@Array;
 }
 
-#magically delicious
 1;
