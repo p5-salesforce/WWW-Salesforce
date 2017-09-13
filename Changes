@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+
+0.300     2017-09-13
     - Fixed some spelling errors
     - Made IO::Socket::SSL v1.94 a prereq (TLS v1.1)
     - Added a cpanfile to maintain prereqs
