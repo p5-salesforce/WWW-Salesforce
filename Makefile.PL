@@ -23,7 +23,9 @@ my %WriteMakefileArgs = (
     "DateTime" => 0,
     "Exporter" => "5.57",
     "IO::Socket::SSL" => "1.94",
+    "LWP::Protocol::https" => "6.00",
     "SOAP::Lite" => "1.0",
+    "base" => 0,
     "strict" => 0,
     "warnings" => 0
   },
@@ -37,7 +39,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.301",
+  "VERSION" => "0.302",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -50,9 +52,11 @@ my %FallbackPrereqs = (
   "ExtUtils::MakeMaker" => 0,
   "File::Spec" => 0,
   "IO::Socket::SSL" => "1.94",
+  "LWP::Protocol::https" => "6.00",
   "POSIX" => 0,
   "SOAP::Lite" => "1.0",
   "Test::More" => "0.88",
+  "base" => 0,
   "strict" => 0,
   "warnings" => 0
 );
