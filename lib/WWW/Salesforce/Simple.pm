@@ -125,10 +125,15 @@ resolve your issue online.
 
 =head1 AUTHORS
 
+Chase Whitener <F<capoeirab@cpan.org>>
+
 Fred Moyer <fred at redhotpenguin dot com>
 
-Chase Whitener <cwhitener at gmail dot com>
+=head1 COPYRIGHT & LICENSE
 
-=head1 COPYRIGHT
+Copyright 2003-2004 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
 
-No Copyright
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut

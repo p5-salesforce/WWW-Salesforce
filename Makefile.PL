@@ -8,7 +8,7 @@ use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
-  "AUTHOR" => "Chase Whitener <capoeirab\@cpan.org>, Byrne Reese <byrne\@cpan.org>",
+  "AUTHOR" => "Chase Whitener <capoeirab\@cpan.org>, Byrne Reese <byrne\@cpan.org>, Fred Moyer <phred\@cpan.org>",
   "BUILD_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
   },

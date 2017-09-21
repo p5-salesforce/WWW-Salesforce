@@ -2,7 +2,8 @@
    "abstract" : "this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
    "author" : [
       "Chase Whitener <capoeirab@cpan.org>",
-      "Byrne Reese <byrne@cpan.org>"
+      "Byrne Reese <byrne@cpan.org>",
+      "Fred Moyer <phred@cpan.org>"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Dist::Zilla version 6.010, CPAN::Meta::Converter version 2.150010",

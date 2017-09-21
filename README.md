@@ -356,42 +356,27 @@ San Francisco.
 
 # AUTHORS
 
+Byrne Reese - &lt;byrne at majordojo dot com>
+
+Chase Whitener <`capoeirab@cpan.org`>
+
 Fred Moyer &lt;fred at redhotpenguin dot com>
 
-Thanks to:
+# CONTRIBUTORS
 
-Chase Whitener &lt;cwhitener at gmail dot com> -
-Maintaining this module and working on development version.
+Michael Blanco
 
-Michael Blanco -
-Finding and fixing some bugs.
+Garth Webb
 
-Garth Webb -
-Finding and fixing bugs. Adding some additional features and more constant types.
+Jun Shimizu
 
-Ron Hess -
-Finding and fixing bugs. Adding some additional features. Adding more tests
-to the build. Providing a lot of other help.
+Ron Hess
 
-Tony Stubblebine -
-Finding a bug and providing a fix.
+Tony Stubblebine
 
-Jun Shimizu -
-Providing more to the WWW::Salesforce::Constants module
-and submitting fixes for various other bugs.
+# COPYRIGHT & LICENSE
 
-Byrne Reese - &lt;byrne at majordojo dot com> -
-Byrne Reese wrote the original Salesforce module.
+Copyright 2003-2004 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
 
-# COPYRIGHT
-
-Copyright 2010-2016 Fred Moyer, All rights reserved.
-
-Copyright 2005-2007 Chase Whitener.
-
-Copyright 2003-2004 Byrne Reese, Chase Whitener. All rights reserved.
-
-# LICENSE
-
-This library is free software and may be distributed under the same terms
-as perl itself.
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
