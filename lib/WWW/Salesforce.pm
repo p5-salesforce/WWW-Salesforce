@@ -3,8 +3,11 @@ package WWW::Salesforce;
 use strict;
 use warnings;
 
-use SOAP::Lite;    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
-use DateTime;
+use Carp ();
+use DateTime ();
+use Scalar::Util ();
+use SOAP::Lite ();    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
+
 # use Data::Dumper;
 use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
@@ -13,99 +16,223 @@ use WWW::Salesforce::Serializer;
 our $VERSION = '0.302';
 $VERSION = eval $VERSION;
 
-our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/8.0';
+our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/40.0';
 our $SF_URI         = 'urn:partner.soap.sforce.com';
 our $SF_PREFIX      = 'sforce';
 our $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
 our $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
-our $SF_APIVERSION  = '23.0';
+our $SF_APIVERSION  = '40.0';
 # set webproxy if firewall blocks port 443 to SF_PROXY
 our $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
+sub password {
+    my $self = shift;
+    # getter
+    return $self->{sf_pass} || '' unless @_;
+
+    # setter
+    my $pass = shift;
+    if (defined($pass) && !ref($pass)) {
+        $self->{sf_pass} = $pass;
+    }
+    else {
+        $self->{sf_pass} = '';
+    }
+    return $self; # method-chaining possible
+}
+
+sub username {
+    my $self = shift;
+    # getter
+    return $self->{sf_user} || '' unless @_;
+
+    # setter
+    my $string = shift;
+    if (defined($string) && !ref($string)) {
+        $self->{sf_user} = $string;
+    }
+    else {
+        $self->{sf_user} = '';
+    }
+    return $self; # method-chaining possible
+}
+
+# for historical purposes (for a time)
+sub get_username { shift->username() }
 
 =encoding utf8
 
 =head1 NAME
 
-WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
+WWW::Salesforce - This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
 
 =head1 SYNOPSIS
 
-    use WWW::Salesforce;
-    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
-                                                password => 'bar' ); };
-    die "Could not login to SFDC: $@" if $@;
+    #!/usr/bin/env perl
+    use strict;
+    use warnings;
+    use v5.14;
 
-    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
-    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
-    # by eval'ing and handling any exceptions that occur.
+    use WWW::Salesforce;
+    use Syntax::Keyword::Try;
+
+    my $sf;
+    try {
+        $sf = WWW::Salesforce->new(
+            username => 'foo',
+            password => 'bar'
+        );
+    }
+    catch {
+        warn "Could not login to Salesforce: $@";
+        exit(1);
+    }
+
+    # try, try, try
+    # Things can go wrong unexpectedly.  Be prepared
+    # by try-ing and catch-ing any exceptions that occur.
 
 =head1 DESCRIPTION
 
-This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
+This class provides a simple abstraction layer between L<SOAP::Lite> and
+L<Salesforce|http://www.Salesforce.com>.
+
+=head1 ATTRIBUTES
+
+L<WWW::Salesforce> makes the following attributes available.
+
+=head2 password
+
+    $sf = $sf->password('my super secret password'); # method chaining
+    my $password = $sf->password();
+
+The password is the password you set for your user account in
+L<Salesforce|http://www.salesforce.com>.
+
+Note, this attribute is only used to generate the access token during
+L<WWW::Salesforce/"login">. You may want to L<WWW::Salesforce/"logout"> before
+changing this attribute.
+
+=head2 username
+
+    $sf = $sf->username('foo@bar.com'); # method chaining
+    my $username = $sf->username;
+
+The username is the email address you set for your user account in
+L<Salesforce|http://www.salesforce.com>.
+
+Note, this attribute is only used to generate the access token during
+L<WWW::Salesforce/"login">. You may want to L<WWW::Salesforce/"logout"> before
+changing this attribute.
 
 =head1 CONSTRUCTORS
 
-=head2 new( HASH )
+L<WWW::Salesforce> makes the following constructors available.
 
-Synonym for C<login>
+=head2 new
+
+    my $sf = WWW::Salesforce->new(
+        username => 'foo@bar.com',
+        password => 'super secrety goodness',
+    );
+
+Creates a new L<WWW::Salesforce> object and then calls the
+L<WWW::Salesforce/"login"> method.
+
+Any of the L<WWW::Salesforce/"ATTRIBUTES"> above can be passed in as a
+parameter via either a hash reference or a hash.
 
 =cut
 
-sub new {
-    return login(@_);
+sub _parse_args {
+    my $args;
+    if ( @_ == 1 && ref $_[0] ) {
+        my %copy = eval { %{ $_[0] } }; # try shallow copy
+        Carp::croak("Argument could not be dereferenced as a hash.") if $@;
+        $args = \%copy;
+    }
+    elsif ( @_ % 2 == 0 ) {
+        $args = {@_};
+    }
+    else {
+        Carp::croak("Got an odd number of elements.");
+    }
+    return $args;
 }
 
+sub new {
+    my $class = shift;
+    my $args = _parse_args(@_);
 
-=head2 login( HASH )
+    my $href = {
+        sf_user => $args->{username} || '',
+        sf_pass => $args->{password} || '',
+        sf_serverurl => $args->{login_url} || $SF_PROXY,
+        sf_sid => undef,
+    };
+    my $self = bless $href, $class;
+    return $self->login($args) unless $args->{no_login};
+    return $self;
+}
 
-The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and C<0> otherwise. Upon a successful login, the C<sessionId> is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
+=head1 METHODS
 
-The following are the accepted input parameters:
+L<WWW::Salesforce> makes the following methods available.
 
-=over
+=head2 login
 
-=item username
+    $sf = $sf->login(); # chaining is possible
+    # specify different credentials:
+    $sf->login(username => 'override@bar.com');
+    # capture error messages!
+    try { $sf->login(); }
+    catch {
+        warn "We couldn't login: $@";
+    }
 
-A Salesforce.com username.
+    # This method can also act as a constructor
+    # although this is discouraged now
+    $sf = WWW::Salesforce->login(
+        username => 'foo@bar.com'
+        password => 'hahaha',
+    );
 
-=item password
+The C<login> method makes use of the soap login method:
+L<Salesforce SOAP-based username and password login flow|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_login.htm>.
 
-The password for the user indicated by C<username>.
+Upon success, it will return your L<WWW::Salesforce> object. On failure, it will
+die with some useful error string.
 
-=back
+On a successful login, the C<session id> is saved and the C<server URL> is set
+properly and used as the endpoint for API communication from here on out.
 
 =cut
 
 sub login {
-    my $class = shift;
-    my (%params) = @_;
+    my $self = shift;
+    my $args = _parse_args(@_);
+    # if this isn't an instance, create one
+    unless ($self && Scalar::Util::blessed($self) && $self->isa('WWW::Salesforce')) {
+        $self ||= 'WWW::Salesforce';
+        $args->{no_login} = 1;
+        $self = new($self, $args);
+    }
+    # allow overriding current attributes
+    $self->username($args->{username} || $self->username());
+    $self->password($args->{password} || $self->password());
 
-    unless ( defined $params{'username'} and length $params{'username'} ) {
-        die("WWW::Salesforce::login() requires a username");
-    }
-    unless ( defined $params{'password'} and length $params{'password'} ) {
-        die("WWW::Salesforce::login() requires a password");
-    }
-    my $self = {
-        sf_user      => $params{'username'},
-        sf_pass      => $params{'password'},
-        sf_serverurl => $SF_PROXY,
-        sf_sid       => undef,                 #session ID
-    };
-    $self->{'sf_serverurl'} = $params{'serverurl'}
-      if ( $params{'serverurl'} && length( $params{'serverurl'} ) );
-    bless $self, $class;
+    my $user = $self->username();
+    my $pass = $self->password();
+    die("WWW::Salesforce::login() requires a username") unless $user;
+    die("WWW::Salesforce::login() requires a password") unless $pass;
 
     my $client = $self->get_client();
     my $r      = $client->login(
-        SOAP::Data->name( 'username' => $self->{'sf_user'} ),
-        SOAP::Data->name( 'password' => $self->{'sf_pass'} )
+        SOAP::Data->name('username' => $user),
+        SOAP::Data->name('password' => $pass)
     );
-    unless ($r) {
-        die sprintf( "could not login, user %s, pass %s",
-            $self->{'sf_user'}, $self->{'sf_pass'} );
-    }
+    die "could not login, user $user, pass $pass" unless $r;
+
     if ( $r->fault() ) {
         die( $r->faultstring() );
     }
@@ -117,26 +244,25 @@ sub login {
     return $self;
 }
 
+=head2 convertLead
 
+    $sf->convertLead(
+        leadId => ['01t500000016RuaAAE', '01t500000016RuaAAF']
+        contactId => ['01t500000016RuaAAC'],
+    );
 
-=head1 METHODS
+The L<convertLead|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_convertlead.htm>
+method converts a L<Lead|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_lead.htm#topic-title>
+into an L<Account|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_account.htm#topic-title>
+and L<Contact|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_contact.htm#topic-title>,
+as well as (optionally) an L<Opportunity|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_opportunity.htm#topic-title>.
 
-=head2 convertLead( HASH )
+To convert a Lead, your account must have the C<Convert Leads> permission and
+the C<Edit> permission on leads, as well as C<Create> and C<Edit> on the
+Account, Contact, and Opportunity objects.
 
-The C<convertLead> method returns an object of type SOAP::SOM if the login attempt was successful, and 0 otherwise.
-
-Converts a Lead into an Account, Contact, or (optionally) an Opportunity
-
-The following are the accepted input parameters:
-
-=over
-
-=item %hash_of_array_references
-
-    leadId => [ 2345, 5678, ],
-    contactId => [ 9876, ],
-
-=back
+Returns an object of type L<SOAP::SOM> if the attempt was successful and
+dies otherwise.
 
 =cut
 
@@ -181,32 +307,41 @@ sub convertLead {
     return $r;
 }
 
-=head2 create( HASH )
+=head2 create
 
-Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
-The hash must contain the 'type' key in order to identify the type of the record to add.
+    my $res = $sf->create(
+        'type'      => 'Lead',
+        'FirstName' => 'conversion test',
+        'LastName'  => 'lead',
+        'Company'   => 'Acme Inc.',
+    );
+    if ($res->valueof('//success') eq 'true') {
+        say "Yay! New Lead with ID: ", $res->valueof('//id');
+    }
 
-Returns a SOAP::Lite object.  Success of this operation can be gleaned from
-the envelope result.
+The L<create|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_create.htm>
+method adds one record, such as an C<Account> or C<Contact> record, to
+your organization's information. The C<create> call is analogous to the
+C<INSERT> statement in SQL.
 
-    $r->envelope->{Body}->{createResponse}->{result}->{success};
+A hash or hash-reference is accepted, but must contain a C<type> key to tell us
+what we're inserting.
+
+Returns a L<SOAP::SOM> object or dies.
+
 
 =cut
 
 sub create {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
-    if ( !keys %in ) {
-        die("Expected a hash of arrays.");
-    }
     my $client = $self->get_client(1);
     my $method =
       SOAP::Data->name("create")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
 
-    my $type = $in{'type'};
-    delete( $in{'type'} );
+    my $type = delete $in{type} || '';
 
     my @elems;
     foreach my $key ( keys %in ) {
@@ -230,10 +365,15 @@ sub create {
 }
 
 
-=head2 delete( ARRAY )
+=head2 delete
 
-Deletes one or more individual objects from your organization's data.
-This subroutine takes as input an array of SCALAR values, where each SCALAR is an C<sObjectId>.
+    # delete just one item
+    my $res = $sf->delete('01t500000016RuaAAE');
+    # delete many items
+    $res = $sf->delete('01t500000016RuaAAE', '01t500000016RuaAAF');
+
+The L<delete|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_delete.htm>
+method will delete one or more individual objects from your organization's data.
 
 =cut
 
@@ -266,11 +406,14 @@ sub delete {
 }
 
 
-=head2 describeGlobal()
+=head2 describeGlobal
 
-Retrieves a list of available objects for your organization's data.
-You can then iterate through this list and use C<describeSObject()> to obtain metadata about individual objects.
-This method calls the Salesforce L<describeGlobal method|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describeglobal.htm>.
+    my $res = $sf->describeGlobal();
+
+The L<describeGlobal|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describeglobal.htm>
+method is used to obtain a list of available objects for your organization. You
+can then iterate through this list and use L<WWW::Salesforce/"describeSObject">
+to obtain metadata about individual objects.
 
 =cut
 
@@ -291,23 +434,20 @@ sub describeGlobal {
     return $r;
 }
 
-=head2 describeLayout( HASH )
+=head2 describeLayout
 
-Describes metadata about a given page layout, including layouts for edit and display-only views and record type mappings.
+    # must provide a type to lookup
+    my $res = $sf->describeLayout(type => 'Contact');
 
-=over
-
-=item type
-
-The type of the object you wish to have described.
-
-=back
+The L<describeLayout|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describelayout.htm>
+method returns metadata about a given page layout, including layouts for edit
+and display-only views and record type mappings.
 
 =cut
 
 sub describeLayout {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'type'} or !length $in{'type'} ) {
         die("Expected hash with key 'type'");
@@ -331,23 +471,20 @@ sub describeLayout {
 }
 
 
-=head2 describeSObject( HASH )
+=head2 describeSObject
 
-Describes metadata (field list and object properties) for the specified object.
+    # must provide a type to lookup
+    my $res = $sf->describeLayout(type => 'Contact');
 
-=over
-
-=item type
-
-The type of the object you wish to have described.
-
-=back
+The L<describeSObject|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm>
+method is used to get metadata (field list and object properties) for the
+specified object.
 
 =cut
 
 sub describeSObject {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'type'} or !length $in{'type'} ) {
         die("Expected hash with key 'type'");
@@ -372,9 +509,13 @@ sub describeSObject {
     return $r;
 }
 
-=head2 describeSObjects( type => ['Account','Contact','CustomObject__c'] )
+=head2 describeSObjects
 
-An array based version of describeSObject; describes metadata (field list and object properties) for the specified object or array of objects.
+    # must provide an array of types to lookup
+    my $res = $sf->describeLayout(type => ['Contact', 'Account', 'Custom__c']);
+
+The L<describeSObjects|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobjects.htm>
+method is used to obtain metadata for a given object or array of objects.
 
 =cut
 
@@ -408,9 +549,15 @@ sub describeSObjects {
     return $r;
 }
 
-=head2 describeTabs()
+=head2 describeTabs
 
-Use the C<describeTabs> call to obtain information about the standard and custom apps to which the logged-in user has access. The C<describeTabs> call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
+    my $res = $sf->describeTabs();
+
+The L<describeTabs|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describetabs.htm>
+method obtains information about the standard and custom apps to which the
+logged-in user has access. It returns the minimum required metadata that can be
+used to render apps in another user interface. Typically this call is used by
+partner applications to render Salesforce data in another user interface.
 
 =cut
 
@@ -429,12 +576,6 @@ sub describeTabs {
     }
     return $r;
 }
-
-=head2 get_client( $readable )
-
-Get a client
-
-=cut
 
 sub get_client {
     my $self = shift;
@@ -456,12 +597,6 @@ sub get_client {
 }
 
 
-=head2 get_session_header()
-
-Gets the session header
-
-=cut
-
 sub get_session_header {
     my ($self) = @_;
     return SOAP::Header->name( 'SessionHeader' =>
@@ -470,9 +605,11 @@ sub get_session_header {
 }
 
 
-=head2 get_session_id()
+=head2 get_session_id
 
-Gets the Salesforce SID
+    my $id = $sf->get_session_id();
+
+Gets the Salesforce SID captured during login.
 
 =cut
 
@@ -483,9 +620,11 @@ sub get_session_id {
 }
 
 
-=head2 get_user_id()
+=head2 get_user_id
 
-Gets the Salesforce UID
+    my $id = $sf->get_user_id();
+
+Gets the Salesforce UID captured during login.
 
 =cut
 
@@ -496,44 +635,25 @@ sub get_user_id {
 }
 
 
-=head2 get_username()
+=head2 getDeleted
 
-Gets the Salesforce Username
+    # get a list of deleted records within a given timespan
+    # times are in GMT
+    my $res = $sf->getDeleted(
+        type => 'Account',
+        start => '2017-09-21T08:42:42',
+        end   => '2017-09-21T08:43:42',
+    );
 
-=cut
-
-sub get_username {
-    my ($self) = @_;
-
-    return $self->{sf_user};
-}
-
-
-=head2 getDeleted( HASH )
-
-Retrieves the list of individual objects that have been deleted within the given time span for the specified object.
-
-=over
-
-=item type
-
-Identifies the type of the object you wish to find deletions for.
-
-=item start
-
-A string identifying the start date/time for the query
-
-=item end
-
-A string identifying the end date/time for the query
-
-=back
+The L<getDeleted|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_getdeleted.htm>
+method retrieves the list of individual objects that have been deleted within
+the given time span for the specified object.
 
 =cut
 
 sub getDeleted {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'type'} || !length $in{'type'} ) {
         die("Expected hash with key of 'type'");
@@ -569,9 +689,12 @@ sub getDeleted {
 }
 
 
-=head2 getServerTimestamp()
+=head2 getServerTimestamp
 
-Retrieves the current system timestamp (GMT) from the Salesforce web service.
+    my $res = $sf->getServerTimestamp();
+
+The L<getServerTimestamp|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_getservertimestamp.htm>
+method retrieves the current system timestamp (GMT) from the Salesforce web service.
 
 =cut
 
@@ -588,31 +711,25 @@ sub getServerTimestamp {
     return $r;
 }
 
-=head2 getUpdated( HASH )
+=head2 getUpdated
 
-Retrieves the list of individual objects that have been updated (added or changed) within the given time span for the specified object.
+    # get a list of updated records within a given timespan
+    # times are in GMT
+    my $res = $sf->getUpdated(
+        type => 'Account',
+        start => '2017-09-21T08:42:42',
+        end   => '2017-09-21T08:43:42',
+    );
 
-=over
-
-=item type
-
-Identifies the type of the object you wish to find updates for.
-
-=item start
-
-A string identifying the start date/time for the query
-
-=item end
-
-A string identifying the end date/time for the query
-
-=back
+The L<getUpdated|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_getupdated.htm>
+method retrieves the list of individual objects that have been updated (added
+or changed) within the given time span for the specified object.
 
 =cut
 
 sub getUpdated {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'type'} || !length $in{'type'} ) {
         die("Expected hash with key of 'type'");
@@ -648,17 +765,13 @@ sub getUpdated {
 }
 
 
-=head2 getUserInfo( HASH )
+=head2 getUserInfo
 
-Retrieves personal information for the user associated with the current session.
+    my $res = $sf->getUserInfo();
 
-=over
-
-=item user
-
-A user ID
-
-=back
+The L<getUserInfo|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_getuserinfo.htm>
+method retrieves personal information for the user associated with the current
+session.
 
 =cut
 
@@ -675,13 +788,17 @@ sub getUserInfo {
     return $r;
 }
 
-=head2 logout()
+=head2 logout
+
+    $sf->logout();
 
 Ends the session for the logged-in user issuing the call. No arguments are needed.
 Useful to avoid hitting the limit of ten open sessions per login.
 L<Logout API Call|http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_logout.htm>
 
 =cut
+
+sub bye { shift->logout() }
 
 sub logout {
     my $self = shift;
@@ -701,27 +818,25 @@ sub logout {
 
 
 
-=head2 query( HASH )
+=head2 query
 
-Executes a query against the specified object and returns data that matches the specified criteria.
+    my $soql = "SELECT Id, Name FROM Account";
+    my $limit = 25;
 
-=over
+    my $res = $sf->query(query => $soql);
+    # or limit our result set
+    $res = $sf->query(query => $soql, limit => $limit);
 
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
+The L<query|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_query.htm>
+method executes the given
+L<SOQL Statement|https://developer.salesforce.com/docs/atlas.en-us.208.0.soql_sosl.meta/soql_sosl/sforce_api_calls_soql_sosl_intro.htm>
+and returns the result set. This query will not include deleted records.
 
 =cut
 
 sub query {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
     if ( !defined $in{'query'} || !length $in{'query'} ) {
         die("A query is needed for the query() method.");
     }
@@ -749,28 +864,24 @@ sub query {
 }
 
 
-=head2 queryAll( HASH )
+=head2 queryAll
 
-Executes a query against the specified object and returns data that matches the
-specified criteria including archived and deleted objects.
+    my $soql = "SELECT Id, Name FROM Account";
+    my $limit = 25;
 
-=over
+    my $res = $sf->queryAll(query => $soql);
+    # or limit our result set
+    $res = $sf->queryAll(query => $soql, limit => $limit);
 
-=item query
-
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
+The L<queryAll|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_queryall.htm>
+method is exactly like the L<WWW::Salesforce/"query"> method with the exception
+that it has read-only access to deleted records as well.
 
 =cut
 
 sub queryAll {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
     if ( !defined $in{'query'} || !length $in{'query'} ) {
         die("A query is needed for the query() method.");
     }
@@ -798,27 +909,36 @@ sub queryAll {
 }
 
 
-=head2 queryMore( HASH )
+=head2 queryMore
 
-Retrieves the next batch of objects from a C<query> or C<queryAll>.
+    my $res = $sf->query(query => "select Name from Contact");
+    my @rows;
+    push @rows, $res->valueof('//queryResponse/result/records')
+      if ( $res->valueof('//queryResponse/result/size') > 0 );
 
-=over
+    # do the extra queries if we aren't done
+    my $done = $res->valueof('//queryResponse/result/done');
+    my $locator = $res->valueof('//queryResponse/result/queryLocator');
+    while (!$done || $done eq 'false') {
+        # requires a queryLocator parameter
+        my $more = $sf->queryMore(queryLocator => $locator);
+        push @rows, $more->valueof('//queryResponse/result/records')
+          if ( $more->valueof('//queryResponse/result/size') > 0 );
 
-=item queryLocator
+        $done = $more->valueof('//queryResponse/result/done');
+        $locator = $more->valueof('//queryResponse/result/queryLocator');
+    }
+    say "Found ", scalar(@rows), " rows";
 
-The handle or string returned by C<query>. This identifies the result set and cursor for fetching the next set of rows from a result set.
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
+The L<queryMore|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_querymore.htm>
+method retrieves the next batch of objects from a L<WWW::Salesforce/"query"> or
+L<WWW::Salesforce/"queryAll"> method call.
 
 =cut
 
 sub queryMore {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
     if ( !defined $in{'queryLocator'} || !length $in{'queryLocator'} ) {
         die("A hash expected with key 'queryLocator'");
     }
@@ -846,23 +966,18 @@ sub queryMore {
     return $r;
 }
 
-=head2 resetPassword( HASH )
+=head2 resetPassword
 
-Changes a user's password to a server-generated value.
+    my $res = $sf->resetPassword(userId => '01t500000016RuaAAE');
 
-=over
-
-=item userId
-
-A user Id.
-
-=back
+The L<resetPassword|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_resetpassword.htm>
+method will change a user's password to a server-generated value.
 
 =cut
 
 sub resetPassword {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'userId'} || !length $in{'userId'} ) {
         die("A hash expected with key 'userId'");
@@ -887,29 +1002,25 @@ sub resetPassword {
     return $r;
 }
 
-=head2 retrieve( HASH )
+=head2 retrieve
 
-=over
+    # all parameters are strings and are required
+    my $res = $sf->retrieve(
+        type => 'Contact',
+        fields => 'FirstName,LastName,Id', # comma separated list in a string
+        ids => '01t500000016RuaAAE,01t500000016RuaAAF',
+        # however, limit is optional and is an integer
+        limit => 500,
+    );
 
-=item fields
-
-A comma delimited list of field name you want retrieved.
-
-=item type
-
-The type of the object being queried.
-
-=item ids
-
-The ids (LIST) of the object you want returned.
-
-=back
+The L<retrieve|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_retrieve.htm>
+method retrieves individual records from a given object type.
 
 =cut
 
 sub retrieve {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     $in{'limit'} = 500
       if ( !defined $in{'limit'} || $in{'limit'} !~ m/^\d+$/ );
@@ -954,22 +1065,21 @@ sub retrieve {
 }
 
 
-=head2 search( HASH )
+=head2 search
 
-=over
+    my $res = $sf->search(
+        searchString => 'FIND {4159017000} IN Phone FIELDS RETURNING Account(Id, Phone, Name)',
+    );
 
-=item searchString
-
-The search string to be used in the query. For example,
-C<< find {4159017000} in phone fields returning contact(id, phone, firstname, lastname), lead(id, phone, firstname, lastname), account(id, phone, name) >>
-
-=back
+The L<search|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_search.htm>
+method searches for records based on a search string
+(L<SOSL String|https://developer.salesforce.com/docs/atlas.en-us.208.0.soql_sosl.meta/soql_sosl/sforce_api_calls_soql_sosl_intro.htm>).
 
 =cut
 
 sub search {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'searchString'} || !length $in{'searchString'} ) {
         die("Expected hash with key 'searchString'");
@@ -992,27 +1102,21 @@ sub search {
 }
 
 
-=head2 setPassword( HASH )
+=head2 setPassword
 
-Sets the specified user's password to the specified value.
+    my $res = $sf->setPassword(
+        userId => '01t500000016RuaAAE',
+        password => 'Some new password!',
+    );
 
-=over
-
-=item userId
-
-A user Id.
-
-=item password
-
-The new password to assign to the user identified by C<userId>.
-
-=back
+The L<setPassword|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_setpassword.htm>
+method sets the specified user's password to the specified value.
 
 =cut
 
 sub setPassword {
     my $self = shift;
-    my (%in) = @_;
+    my %in = %{_parse_args(@_)};
 
     if ( !defined $in{'userId'} || !length $in{'userId'} ) {
         die("Expected a hash with key 'userId'");
@@ -1045,7 +1149,12 @@ sub setPassword {
 
 =head2 sf_date
 
-Converts a time in Epoch seconds to the date format that Salesforce likes
+    my $date = $sf->sf_date(time);
+    # Or, as a class method
+    $date = WWW::Salesforce->sf_date(time);
+    say $date; # 2017-09-21T08:42:42.000-0400
+
+Converts a time in Epoch seconds to the date format that Salesforce likes.
 
 =cut
 
@@ -1058,20 +1167,39 @@ sub sf_date {
 }
 
 
-=head2 update(type => $type, HASHREF [, HASHREF ...])
+=head2 update
 
-Updates one or more existing objects in your organization's data. This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User) and one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
+    # an array of hash-refs representing SObjects is expected
+    my $res = $sf->update({
+        Id => '01t500000016RuaAAE',
+        Type => 'Account',
+        Name => "Bender's Shiny Metal Co.", # Update our Account name
+    });
 
-The hash must contain the 'Id' key in order to identify the record to update.
+The L<update|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_update.htm>
+method is analogous to a SQL C<UPDATE> statement.
+
+The only requirement is that each object represented by a hash reference must
+contain one key called C<id> or C<Id> and a C<type> or C<Type> key. The other
+keys in the hash reference are the fields we'll be updating for the given object.
+
+B<* Note:> As of version C<20.0> of the Salesforce API, you can now update
+objects of differing types. This makes passing the object C<type> as the first
+argument no longer necessary. Just pass an array of hash references.
 
 =cut
 
 sub update {
     my $self = shift;
+    die "Expected an array of hash references" unless @_;
 
-    my ( $spec, $type ) = splice @_, 0, 2;
-    if ( $spec ne 'type' || !$type ) {
-        die("Expected a hash with key 'type' as first argument");
+    my $type;
+    unless (ref($_[0])) {
+        my $spec = shift;
+        my $type = shift;
+        if ($spec ne 'type' || !$type) {
+            die "Expected a hash with key 'type'";
+        }
     }
 
     my %tmp      = ();
@@ -1085,11 +1213,13 @@ sub update {
     foreach (@sobjects) {         # arg list is now an array of hash refs
         my %in = %{$_};
 
-        my $id = $in{'id'};
-        delete( $in{'id'} );
-        if ( !$id ) {
-            die("Expected a hash with key 'id'");
-        }
+        my $id = $in{id} || $in{Id};
+        my $otype = $in{type} || $in{Type} || $type;
+        delete $in{id};
+        delete $in{Id};
+        delete $in{type};
+        delete $in{Type};
+        die("Expected a hash with key 'id'") unless $id;
 
         my @elems;
         my @fieldsToNull;
@@ -1103,7 +1233,7 @@ sub update {
             else {
                 push @elems,
                   SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
-                  ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+                  ->type( WWW::Salesforce::Constants->type( $otype, $key ) );
             }
         }
         for my $key ( @fieldsToNull ) {
@@ -1134,35 +1264,82 @@ sub update {
 }
 
 
-=head2 upsert(type => $type, key => $key, HASHREF [, HASHREF ...])
+=head2 upsert
 
-Updates or inserts one or more objects in your organization's data.  If the data doesn't exist on Salesforce, it will be inserted.  If it already exists it will be updated.
+    my $res = $sf->upsert('externalIDFieldName',
+        {
+            Type => 'Account', # each object must have a type
+            externalIDFieldName => '01t500000016RuaAAE', # key field name
+            Name => "Bender's Shiny Metal Co.",
+        },
+        # up to 200 objects possible for upsert
+        {
+            Type => 'Contact', # each object must have a type
+            externalIDFieldName => '01t500000016RuaAAE', # key field name
+            Name => "Bender Robot",
+        }
+    );
+    # or, the old way
+    $res = $sf->upsert(
+        type => 'Account',
+        key => 'externalIDFieldName',
+        {
+            externalIDFieldName => '01t500000016RuaAAE', # key field name
+            Name => "Bender's Shiny Metal Co.",
+        }
+    );
 
-This subroutine takes as input a B<type> value which names the type of object to update (e.g. Account, User).  It also takes a B<key> value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If B<key> is not given it will default to 'Id' which is Salesforce's own internal unique ID.  This key can be any of Salesforce's default fields or an custom field marked as an external key.
-
-Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
+The L<upsert|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_upsert.htm>
+method creates new records and updates existing records; uses a custom field to
+determine the presence of existing records. In most cases, we recommend that
+you use C<upsert> instead of L<WWW::Salesforce/"create"> to avoid creating
+unwanted duplicate records (idempotent).
 
 =cut
 
 sub upsert {
     my $self = shift;
-    my ( $spec, $type, $extern, $name, @sobjects ) = @_;
-
-    if ( $spec ne 'type' || !$type ) {
-        die("Expected a hash with key 'type' as first argument");
+    my @sobjects;
+    # bugwards compatible param checking. *sigh*
+    # the last parameters should always be hash references (SObjects)
+    while ($_[-1] && ref($_[-1]) eq 'HASH') {
+        push @sobjects, pop;
     }
 
-    # Default to the 'id' field
-    $name ||= 'id';
+    # Whatever's left on the call stack tells us what we're dealing with
+    # we no longer need the type from here, but it used to be required
+    # key and externalIDFieldName are synonymous
+    # type => 'Account', key => 'Id'
+    # type => 'Account', 'Id'
+    # 'Account', 'Id'
+    # 'Id'
+    my ($type, $field_name);
+    if (@_ == 4) {
+        (undef, $type, undef, $field_name) = @_;
+    }
+    elsif (@_ == 3) {
+        (undef, $type, $field_name) = @_;
+    }
+    elsif (@_ == 2) {
+        ($type, $field_name) = @_;
+    }
+    elsif (@_ == 1) {
+        $field_name = shift;
+    }
+    elsif (@_ % 2 == 0 && !@sobjects) {
+        push @sobjects, _parse_args(@_);
+    }
+
+    unless (@sobjects) {
+        die("Expected an array of SObjects (hash references) to be upserted");
+    }
+    # Defaults
+    $type ||= '';
+    $field_name ||= 'id';
 
     my %tmp = ();
-    if ( ref $sobjects[0] ne 'HASH' ) {
-        %tmp      = @_;
-        @sobjects = ( \%tmp );    # create an array of one
-    }
-
     my @updates =
-      ( SOAP::Data->prefix($SF_PREFIX)->name( 'externalIDFieldName' => $name )
+      ( SOAP::Data->prefix($SF_PREFIX)->name( 'externalIDFieldName' => $field_name )
           ->attr( { 'xsi:type' => 'xsd:string' } ) );
 
     foreach (@sobjects) {         # arg list is now an array of hash refs
@@ -1170,6 +1347,9 @@ sub upsert {
 
         my @elems;
         my @fieldsToNull;
+        my $otype = $in{type} || $in{Type} || $type;
+        delete $in{type};
+        delete $in{Type};
         foreach my $key ( keys %in ) {
             if ( !defined $in{$key} ) {
                 push @fieldsToNull, $key;
@@ -1177,7 +1357,7 @@ sub upsert {
             else {
                 push @elems,
                 SOAP::Data->prefix($SF_PREFIX)->name( $key => $in{$key} )
-                ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+                ->type( WWW::Salesforce::Constants->type( $otype, $key ) );
             }
         }
         for my $key ( @fieldsToNull ) {
@@ -1187,7 +1367,7 @@ sub upsert {
         }
         push @updates,
           SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
-          ->attr( { 'xsi:type' => 'sforce:' . $type } );
+          ->attr( { 'xsi:type' => 'sforce:' . $otype } );
     }
 
     my $client = $self->get_client(1);
@@ -1208,10 +1388,6 @@ sub upsert {
 }
 
 
-=head2 get_clientM( $readable )
-
-=cut
-
 sub get_clientM {
     my $self = shift;
     my ($readable) = @_;
@@ -1227,19 +1403,14 @@ sub get_clientM {
     return $client;
 }
 
-=head2 get_session_headerM()
-
-=cut
-
 sub get_session_headerM {
     my ($self) = @_;
     return SOAP::Header->name( 'SessionHeader' =>
           \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
       ->uri($SF_URIM)->prefix($SF_PREFIX);
-
 }
 
-=head2 describeMetadata()
+=head2 describeMetadata
 
 Get some metadata info about your instance.
 
@@ -1248,12 +1419,12 @@ Get some metadata info about your instance.
 sub describeMetadata {
     my $self = shift;
     my $client = $self->get_clientM(1);
-    my $method =
-      SOAP::Data->name("describeMetadata")->prefix($SF_PREFIX)->uri($SF_URIM);
+    my $method = SOAP::Data->name("describeMetadata")->prefix($SF_PREFIX)->uri($SF_URIM);
 
     my $r = $client->call(
-          $method =>
-          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->get_session_headerM() );
+        $method =>
+            SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->get_session_headerM()
+    );
     unless ($r) {
         die "could not call method $method";
     }
@@ -1264,7 +1435,7 @@ sub describeMetadata {
 }
 
 
-=head2 retrieveMetadata()
+=head2 retrieveMetadata
 
 =cut
 
@@ -1308,7 +1479,7 @@ SOAP::Data->name('retrieveRequest'=>
 }
 
 
-=head2 checkAsyncStatus( $pid )
+=head2 checkAsyncStatus
 
 =cut
 
@@ -1347,7 +1518,7 @@ sub checkAsyncStatus {
 }
 
 
-=head2 checkRetrieveStatus( $pid )
+=head2 checkRetrieveStatus
 
 =cut
 
@@ -1372,7 +1543,7 @@ sub checkRetrieveStatus {
 }
 
 
-=head2 getErrorDetails( RESULT )
+=head2 getErrorDetails
 
 Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
 
@@ -1391,22 +1562,12 @@ sub getErrorDetails {
 }
 
 
-=head2 bye()
+=head2 bye
 
-Synonym for C<logout>.
-
-Ends the session for the logged-in user issuing the call. No arguments are needed.
-Returns a reference to an array of hash refs
-
-=cut
-
-sub bye {
-    my ( $self ) = @_;
-    $self->logout() or die 'could not logout';
-}
+Synonym for L<WWW::Salesforce/"logout">.
 
 
-=head2 do_query( $query, [$limit] )
+=head2 do_query
 
 Returns a reference to an array of hash refs
 
@@ -1450,7 +1611,15 @@ sub do_query {
 }
 
 
-=head2 do_queryAll( $query, [$limit] )
+=head2 do_queryAll
+
+    my $soql_query = "Select Name from Contact";
+    my $limit = 10;
+
+    # get all contacts
+    my $res = $sf->do_queryAll($soql_query);
+    # only get 10 contacts
+    $res = $sf->do_queryAll($soql_query, $limit)
 
 Returns a reference to an array of hash refs
 
@@ -1529,10 +1698,12 @@ sub _retrieve_queryMore {
 
 }
 
-=head2 get_field_list( $table_name )
+=head2 get_field_list
 
-Returns a ref to an array of hash refs for each field name
-Field name keyed as 'name'
+    my $fields = $sf->get_field_list();
+
+Returns a reference to an array of hash references for each field name.
+Field name keyed as C<name>
 
 =cut
 
@@ -1556,9 +1727,11 @@ sub get_field_list {
 }
 
 
-=head2 get_tables()
+=head2 get_tables
 
-Returns a reference to an array of hash references
+    my $tables = $sf->get_tables();
+
+Returns a reference to an array of hash references.
 Each hash gives the properties for each Salesforce object
 
 =cut
@@ -1582,49 +1755,6 @@ sub get_tables {
 1;
 __END__
 
-
-=head1 EXAMPLES
-
-=head2 login()
-
-    use WWW::Salesforce;
-    my $sf = WWW::Salesforce->login( 'username' => $user,'password' => $pass )
-        or die $@;
-
-=head2 search()
-
-    my $query = 'find {4159017000} in phone fields returning contact(id, phone, ';
-    $query .= 'firstname, lastname), lead(id, phone, firstname, lastname), ';
-    $query .= 'account(id, phone, name)';
-    my $result = $sforce->search( 'searchString' => $query );
-
-=head1 SUPPORT
-
-Please visit Salesforce.com's user/developer forums online for assistance with
-this module. You are free to contact the author directly if you are unable to
-resolve your issue online.
-
-=head1 CAVEATS
-
-The C<describeSObjects> and C<describeTabs> API calls are not yet complete. These will be
-completed in future releases.
-
-Not enough test cases built into the install yet.  More to be added.
-
-=head1 SEE ALSO
-
-    L<DBD::Salesforce> by Jun Shimizu
-    L<SOAP::Lite> by Byrne Reese
-
-    Examples on Salesforce website:
-    L<http://www.sforce.com/us/docs/sforce70/wwhelp/wwhimpl/js/html/wwhelp.htm>
-
-=head1 HISTORY
-
-This Perl module was originally provided and presented as part of
-the first Salesforce.com dreamForce conference on Nov. 11, 2003 in
-San Francisco.
-
 =head1 AUTHORS
 
 Byrne Reese - <byrne at majordojo dot com>
@@ -1647,7 +1777,7 @@ Tony Stubblebine
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2003-2004 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
+Copyright 2003 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

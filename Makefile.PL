@@ -7,7 +7,7 @@ use 5.008001;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
+  "ABSTRACT" => "This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
   "AUTHOR" => "Chase Whitener <capoeirab\@cpan.org>, Byrne Reese <byrne\@cpan.org>, Fred Moyer <phred\@cpan.org>",
   "BUILD_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
@@ -20,6 +20,7 @@ my %WriteMakefileArgs = (
   "MIN_PERL_VERSION" => "5.008001",
   "NAME" => "WWW::Salesforce",
   "PREREQ_PM" => {
+    "Carp" => 0,
     "DateTime" => 0,
     "Exporter" => "5.57",
     "IO::Socket::SSL" => "1.94",
@@ -47,6 +48,7 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
+  "Carp" => 0,
   "DateTime" => 0,
   "Exporter" => "5.57",
   "ExtUtils::MakeMaker" => 0,

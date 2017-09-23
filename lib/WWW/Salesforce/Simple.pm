@@ -131,7 +131,7 @@ Fred Moyer <fred at redhotpenguin dot com>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2003-2004 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
+Copyright 2003 Byrne Reese, Chase Whitener, Fred Moyer. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
