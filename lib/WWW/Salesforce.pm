@@ -170,7 +170,7 @@ sub convertLead {
     my $client = $self->_get_client(1);
     my $r      = $client->convertLead(
         SOAP::Data->name( "leadConverts" => \SOAP::Data->value(@data) ),
-        $self->get_session_header() );
+        $self->_get_session_header() );
 
     unless ($r) {
         die "cound not convertLead";
@@ -218,7 +218,7 @@ sub create {
     my $r = $client->call(
         $method => SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
           ->attr( { 'xsi:type' => 'sfons:' . $type } ),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -254,7 +254,7 @@ sub delete {
 
     my $r = $client->call(
         $method => @elems,
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -281,7 +281,7 @@ sub describeGlobal {
     my $method =
       SOAP::Data->name("describeGlobal")->prefix($SF_PREFIX)->uri($SF_URI);
 
-    my $r = $client->call( $method, $self->get_session_header() );
+    my $r = $client->call( $method, $self->_get_session_header() );
     unless ($r) {
         die "could not call method $method";
     }
@@ -319,7 +319,7 @@ sub describeLayout {
         $method =>
           SOAP::Data->prefix($SF_PREFIX)->name( 'sObjectType' => $in{'type'} )
           ->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -361,7 +361,7 @@ sub describeSObject {
         $method =>
           SOAP::Data->prefix($SF_PREFIX)->name( 'sObjectType' => $in{'type'} )
           ->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -396,7 +396,7 @@ sub describeSObjects {
     my $r = $client->call(
         $method => SOAP::Data->prefix($SF_PREFIX)->name('sObjectType')
           ->value( @{ $in{'type'} } )->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
 
     unless ($r) {
@@ -420,7 +420,7 @@ sub describeTabs {
     my $method =
       SOAP::Data->name("describeTabs")->prefix($SF_PREFIX)->uri($SF_URI);
 
-    my $r = $client->call( $method, $self->get_session_header() );
+    my $r = $client->call( $method, $self->_get_session_header() );
     unless ($r) {
         die "could not call method $method";
     }
@@ -436,18 +436,10 @@ sub get_client {
     return shift->_get_client(@_);
 }
 
-
-=head2 get_session_header()
-
-Gets the session header
-
-=cut
-
+# TODO: remove in version 0.400
 sub get_session_header {
-    my ($self) = @_;
-    return SOAP::Header->name( 'SessionHeader' =>
-          \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
-      ->uri($SF_URI)->prefix($SF_PREFIX);
+    warn "The method: get_session_header() has always been private. It is now deprecated and will be removed in version 0.400.";
+    return shift->_get_session_header(@_);
 }
 
 
@@ -538,7 +530,7 @@ sub getDeleted {
         SOAP::Data->prefix($SF_PREFIX)
           ->name( 'endDate' => $in{'end'} )
           ->type('xsd:dateTime'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -559,7 +551,7 @@ Retrieves the current system timestamp (GMT) from the Salesforce web service.
 sub getServerTimestamp {
     my $self   = shift;
     my $client = $self->_get_client(1);
-    my $r      = $client->getServerTimestamp( $self->get_session_header() );
+    my $r      = $client->getServerTimestamp( $self->_get_session_header() );
     unless ($r) {
         die "could not getServerTimestamp";
     }
@@ -617,7 +609,7 @@ sub getUpdated {
         SOAP::Data->prefix($SF_PREFIX)
           ->name( 'endDate' => $in{'end'} )
           ->type('xsd:dateTime'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
     unless ($r) {
         die "could not call method $method";
@@ -646,7 +638,7 @@ A user ID
 sub getUserInfo {
     my $self   = shift;
     my $client = $self->_get_client(1);
-    my $r      = $client->getUserInfo( $self->get_session_header() );
+    my $r      = $client->getUserInfo( $self->_get_session_header() );
     unless ($r) {
         die "could not getUserInfo";
     }
@@ -670,7 +662,7 @@ sub logout {
     my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("logout")->prefix($SF_PREFIX)->uri($SF_URI);
-    my $r = $client->call( $method, $self->get_session_header() );
+    my $r = $client->call( $method, $self->_get_session_header() );
     unless ($r) {
         die "could not call method $method";
     }
@@ -718,7 +710,7 @@ sub query {
       ->prefix($SF_PREFIX)->uri($SF_URI);
     my $client = $self->_get_client();
     my $r = $client->query( SOAP::Data->type( 'string' => $in{'query'} ),
-        $limit, $self->get_session_header() );
+        $limit, $self->_get_session_header() );
 
     unless ($r) {
         die "could not query " . $in{'query'};
@@ -767,7 +759,7 @@ sub queryAll {
       ->prefix($SF_PREFIX)->uri($SF_URI);
     my $client = $self->_get_client();
     my $r = $client->queryAll( SOAP::Data->name( 'queryString' => $in{'query'} ),
-        $limit, $self->get_session_header() );
+        $limit, $self->_get_session_header() );
 
     unless ($r) {
         die "could not query " . $in{'query'};
@@ -815,7 +807,7 @@ sub queryMore {
     my $client = $self->_get_client();
     my $r      = $client->queryMore(
         SOAP::Data->name( 'queryLocator' => $in{'queryLocator'} ),
-        $limit, $self->get_session_header() );
+        $limit, $self->_get_session_header() );
 
     unless ($r) {
         die "could not queryMore " . $in{'queryLocator'};
@@ -856,7 +848,7 @@ sub resetPassword {
         $method =>
           SOAP::Data->prefix($SF_PREFIX)->name( 'userId' => $in{'userId'} )
           ->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
 
     unless ($r) {
@@ -922,7 +914,7 @@ sub retrieve {
         SOAP::Data->prefix($SF_PREFIX)->name( 'sObjectType' => $in{'type'} )
           ->type('xsd:string'),
         @elems,
-        $self->get_session_header()
+        $self->_get_session_header()
     );
 
     unless ($r) {
@@ -960,7 +952,7 @@ sub search {
     my $r      = $client->call(
         $method => SOAP::Data->prefix($SF_PREFIX)
           ->name( 'searchString' => $in{'searchString'} )->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
 
     unless ($r) {
@@ -1011,7 +1003,7 @@ sub setPassword {
           ->type('xsd:string'),
         SOAP::Data->prefix($SF_PREFIX)->name( 'password' => $in{'password'} )
           ->type('xsd:string'),
-        $self->get_session_header()
+        $self->_get_session_header()
     );
 
     unless ($r) {
@@ -1102,7 +1094,7 @@ sub update {
       SOAP::Data->name("update")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
     my $r = $client->call(
-        $method => $self->get_session_header(),
+        $method => $self->_get_session_header(),
         @updates
     );
     unless ($r) {
@@ -1176,7 +1168,7 @@ sub upsert {
       SOAP::Data->name("upsert")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
     my $r = $client->call(
-        $method => $self->get_session_header(),
+        $method => $self->_get_session_header(),
         @updates
     );
     unless ($r) {
@@ -1194,16 +1186,10 @@ sub get_clientM {
     return shift->_get_client_meta(@_);
 }
 
-=head2 get_session_headerM()
-
-=cut
-
+# TODO: remove in version 0.400
 sub get_session_headerM {
-    my ($self) = @_;
-    return SOAP::Header->name( 'SessionHeader' =>
-          \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
-      ->uri($SF_URIM)->prefix($SF_PREFIX);
-
+    warn "The method: get_session_headerM() has always been private. It is now deprecated and will be removed in version 0.400.";
+    return shift->_get_session_header_meta(@_);
 }
 
 =head2 describeMetadata()
@@ -1220,7 +1206,7 @@ sub describeMetadata {
 
     my $r = $client->call(
           $method =>
-          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->get_session_headerM() );
+          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->_get_session_header_meta() );
     unless ($r) {
         die "could not call method $method";
     }
@@ -1252,7 +1238,7 @@ sub retrieveMetadata {
       SOAP::Data->name('retrieve')->prefix($SF_PREFIX)->uri($SF_URIM);
     my $r = $client->call(
             $method,
-            $self->get_session_headerM(),
+            $self->_get_session_header_meta(),
 SOAP::Data->name('retrieveRequest'=>
        \SOAP::Data->value(
        SOAP::Data->name( 'apiVersion'=>$SF_APIVERSION),
@@ -1295,7 +1281,7 @@ sub checkAsyncStatus {
         $r = $client->call(
                 $method,
                 SOAP::Data->name('asyncProcessId'=>$pid)->type('xsd:ID'),
-                $self->get_session_headerM()
+                $self->_get_session_header_meta()
         );
         unless ($r) {
             die "could not call method $method";
@@ -1327,7 +1313,7 @@ sub checkRetrieveStatus {
     my $r = $client->call(
             $method,
             SOAP::Data->name('asyncProcessId'=>$pid),
-            $self->get_session_headerM()
+            $self->_get_session_header_meta()
     );
     unless ($r) {
         die "could not call method $method";
@@ -1580,6 +1566,21 @@ sub _get_client_meta {
         ->proxy($self->{'sf_metadataServerUrl'})->soapversion('1.1');
     return $client;
 }
+
+sub _get_session_header {
+    my ($self) = @_;
+    return SOAP::Header->name('SessionHeader' =>
+            \SOAP::Header->name('sessionId' => $self->{'sf_sid'}))
+        ->uri($SF_URI)->prefix($SF_PREFIX);
+}
+
+sub _get_session_header_meta {
+    my ($self) = @_;
+    return SOAP::Header->name( 'SessionHeader' =>
+            \SOAP::Header->name( 'sessionId' => $self->{'sf_sid'} ) )
+        ->uri($SF_URIM)->prefix($SF_PREFIX);
+}
+
 
 1;
 __END__

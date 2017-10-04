@@ -97,10 +97,6 @@ An array based version of describeSObject; describes metadata (field list and ob
 
 Use the `describeTabs` call to obtain information about the standard and custom apps to which the logged-in user has access. The `describeTabs` call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
 
-## get\_session\_header()
-
-Gets the session header
-
 ## get\_session\_id()
 
 Gets the Salesforce SID
@@ -258,8 +254,6 @@ Updates or inserts one or more objects in your organization's data.  If the data
 This subroutine takes as input a **type** value which names the type of object to update (e.g. Account, User).  It also takes a **key** value which specifies the unique key Salesforce should use to determine if it needs to update or insert.  If **key** is not given it will default to 'Id' which is Salesforce's own internal unique ID.  This key can be any of Salesforce's default fields or an custom field marked as an external key.
 
 Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
-
-## get\_session\_headerM()
 
 ## describeMetadata()
 
