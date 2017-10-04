@@ -1188,24 +1188,10 @@ sub upsert {
     return $r;
 }
 
-
-=head2 get_clientM( $readable )
-
-=cut
-
+# TODO: remove in version 0.400
 sub get_clientM {
-    my $self = shift;
-    my ($readable) = @_;
-    $readable = ($readable) ? 1 : 0;
-
-    my $client =
-      SOAP::Lite->readable($readable)
-      ->deserializer( WWW::Salesforce::Deserializer->new )
-      ->serializer( WWW::Salesforce::Serializer->new )
-      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1)
-      ->proxy( $self->{'sf_metadataServerUrl'} )
-      ->soapversion('1.1');
-    return $client;
+    warn "The method: get_clientM() has always been private. It is now deprecated and will be removed in version 0.400.";
+    return shift->_get_client_meta(@_);
 }
 
 =head2 get_session_headerM()
@@ -1228,7 +1214,7 @@ Get some metadata info about your instance.
 
 sub describeMetadata {
     my $self = shift;
-    my $client = $self->get_clientM(1);
+    my $client = $self->_get_client_meta(1);
     my $method =
       SOAP::Data->name("describeMetadata")->prefix($SF_PREFIX)->uri($SF_URIM);
 
@@ -1261,7 +1247,7 @@ sub retrieveMetadata {
                         )
                     ));
     }
-    my $client = $self->get_clientM(1);
+    my $client = $self->_get_client_meta(1);
     my $method =
       SOAP::Data->name('retrieve')->prefix($SF_PREFIX)->uri($SF_URIM);
     my $r = $client->call(
@@ -1297,7 +1283,7 @@ sub checkAsyncStatus {
     my $self = shift;
     my $pid = shift;
     #print "JOB - ID $pid\n";
-    my $client = $self->get_clientM(1);
+    my $client = $self->_get_client_meta(1);
     my $method = SOAP::Data->name('checkStatus')->prefix($SF_PREFIX)->uri($SF_URIM);
     my $r;
     my $waitTimeMilliSecs = 1;
@@ -1335,7 +1321,7 @@ sub checkAsyncStatus {
 sub checkRetrieveStatus {
     my $self = shift;
     my $pid = shift;
-    my $client = $self->get_clientM(1);
+    my $client = $self->_get_client_meta(1);
     my $method = SOAP::Data->name('checkRetrieveStatus')->prefix($SF_PREFIX)->uri($SF_URIM);
 
     my $r = $client->call(
@@ -1565,17 +1551,33 @@ sub _get_client {
     my ($readable) = @_;
     $readable = ($readable) ? 1 : 0;
 
-    my $client =
-      SOAP::Lite->readable($readable)
-      ->deserializer( WWW::Salesforce::Deserializer->new )
-      ->serializer( WWW::Salesforce::Serializer->new )
-      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1);
+    my $client
+        = SOAP::Lite->readable($readable)
+        ->deserializer(WWW::Salesforce::Deserializer->new)
+        ->serializer(WWW::Salesforce::Serializer->new)
+        ->on_action(sub { return '""' })->uri($SF_URI)->multirefinplace(1);
 
-    if($WEB_PROXY) {
-        $client->proxy( $self->{'sf_serverurl'}, proxy => ['https' => $WEB_PROXY ] );
-    } else {
-        $client->proxy( $self->{'sf_serverurl'} );
+    if ($WEB_PROXY) {
+        $client->proxy($self->{'sf_serverurl'},
+            proxy => ['https' => $WEB_PROXY]);
     }
+    else {
+        $client->proxy($self->{'sf_serverurl'});
+    }
+    return $client;
+}
+
+sub _get_client_meta {
+    my $self = shift;
+    my ($readable) = @_;
+    $readable = ($readable) ? 1 : 0;
+
+    my $client
+        = SOAP::Lite->readable($readable)
+        ->deserializer(WWW::Salesforce::Deserializer->new)
+        ->serializer(WWW::Salesforce::Serializer->new)
+        ->on_action(sub { return '""' })->uri($SF_URI)->multirefinplace(1)
+        ->proxy($self->{'sf_metadataServerUrl'})->soapversion('1.1');
     return $client;
 }
 

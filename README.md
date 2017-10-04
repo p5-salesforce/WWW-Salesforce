@@ -259,8 +259,6 @@ This subroutine takes as input a **type** value which names the type of object t
 
 Finally, this method takes one or more perl HASH references containing the fields (the keys of the hash) and the values of the record that will be updated.
 
-## get\_clientM( $readable )
-
 ## get\_session\_headerM()
 
 ## describeMetadata()

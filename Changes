@@ -3,7 +3,8 @@ Revision history for Perl extension {{$dist->name}}
 {{$NEXT}}
     - Fix licensing and authors to ensure everyone's credited properly.
     - Add LWP::Protocol::https to the prerequisites.
-    - Note deprecation of get_client() method in 0.400. it's a private method
+    - Note deprecation of get_client() in 0.400. it's a private method
+    - Note deprecation of get_clientM() in 0.400. it's a private method
 
 0.301     2017-09-13
     - Get rid of the last of the 'use vars' pragma
