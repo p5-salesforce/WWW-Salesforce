@@ -97,7 +97,7 @@ sub login {
       if ( $params{'serverurl'} && length( $params{'serverurl'} ) );
     bless $self, $class;
 
-    my $client = $self->get_client();
+    my $client = $self->_get_client();
     my $r      = $client->login(
         SOAP::Data->name( 'username' => $self->{'sf_user'} ),
         SOAP::Data->name( 'password' => $self->{'sf_pass'} )
@@ -167,7 +167,7 @@ sub convertLead {
     }
 
     #got the data lined up, make the call
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $r      = $client->convertLead(
         SOAP::Data->name( "leadConverts" => \SOAP::Data->value(@data) ),
         $self->get_session_header() );
@@ -200,7 +200,7 @@ sub create {
     if ( !keys %in ) {
         die("Expected a hash of arrays.");
     }
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("create")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
@@ -240,7 +240,7 @@ This subroutine takes as input an array of SCALAR values, where each SCALAR is a
 sub delete {
     my $self = shift;
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method = SOAP::Data->name("delete")->prefix($SF_PREFIX)->uri($SF_URI);
 
     my @elems;
@@ -277,7 +277,7 @@ This method calls the Salesforce L<describeGlobal method|https://developer.sales
 sub describeGlobal {
     my $self = shift;
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("describeGlobal")->prefix($SF_PREFIX)->uri($SF_URI);
 
@@ -312,7 +312,7 @@ sub describeLayout {
     if ( !defined $in{'type'} or !length $in{'type'} ) {
         die("Expected hash with key 'type'");
     }
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("describeLayout")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call(
@@ -353,7 +353,7 @@ sub describeSObject {
         die("Expected hash with key 'type'");
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("describeSObject")->prefix($SF_PREFIX)->uri($SF_URI);
 
@@ -389,7 +389,7 @@ sub describeSObjects {
         die "Expected hash with key 'type' containing array reference";
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("describeSObjects")->prefix($SF_PREFIX)->uri($SF_URI);
 
@@ -416,7 +416,7 @@ Use the C<describeTabs> call to obtain information about the standard and custom
 
 sub describeTabs {
     my $self   = shift;
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("describeTabs")->prefix($SF_PREFIX)->uri($SF_URI);
 
@@ -430,29 +430,10 @@ sub describeTabs {
     return $r;
 }
 
-=head2 get_client( $readable )
-
-Get a client
-
-=cut
-
+# TODO: remove in version 0.400
 sub get_client {
-    my $self = shift;
-    my ($readable) = @_;
-    $readable = ($readable) ? 1 : 0;
-
-    my $client =
-      SOAP::Lite->readable($readable)
-      ->deserializer( WWW::Salesforce::Deserializer->new )
-      ->serializer( WWW::Salesforce::Serializer->new )
-      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1);
-
-    if($WEB_PROXY) {
-        $client->proxy( $self->{'sf_serverurl'}, proxy => ['https' => $WEB_PROXY ] );
-    } else {
-        $client->proxy( $self->{'sf_serverurl'} );
-    }
-    return $client;
+    warn "The method: get_client() has always been private. It is now deprecated and will be removed in version 0.400.";
+    return shift->_get_client(@_);
 }
 
 
@@ -545,7 +526,7 @@ sub getDeleted {
         die("Expected hash with key of 'end' which is a date");
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("getDeleted")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call(
@@ -577,7 +558,7 @@ Retrieves the current system timestamp (GMT) from the Salesforce web service.
 
 sub getServerTimestamp {
     my $self   = shift;
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $r      = $client->getServerTimestamp( $self->get_session_header() );
     unless ($r) {
         die "could not getServerTimestamp";
@@ -624,7 +605,7 @@ sub getUpdated {
         die("Expected hash with key of 'end' which is a date");
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("getUpdated")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call(
@@ -664,7 +645,7 @@ A user ID
 
 sub getUserInfo {
     my $self   = shift;
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $r      = $client->getUserInfo( $self->get_session_header() );
     unless ($r) {
         die "could not getUserInfo";
@@ -686,7 +667,7 @@ L<Logout API Call|http://www.salesforce.com/us/developer/docs/api/Content/sforce
 sub logout {
     my $self = shift;
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("logout")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call( $method, $self->get_session_header() );
@@ -735,7 +716,7 @@ sub query {
     my $limit = SOAP::Header->name(
         'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
       ->prefix($SF_PREFIX)->uri($SF_URI);
-    my $client = $self->get_client();
+    my $client = $self->_get_client();
     my $r = $client->query( SOAP::Data->type( 'string' => $in{'query'} ),
         $limit, $self->get_session_header() );
 
@@ -784,7 +765,7 @@ sub queryAll {
     my $limit = SOAP::Header->name(
         'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
       ->prefix($SF_PREFIX)->uri($SF_URI);
-    my $client = $self->get_client();
+    my $client = $self->_get_client();
     my $r = $client->queryAll( SOAP::Data->name( 'queryString' => $in{'query'} ),
         $limit, $self->get_session_header() );
 
@@ -831,7 +812,7 @@ sub queryMore {
     my $limit = SOAP::Header->name(
         'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
       ->prefix($SF_PREFIX)->uri($SF_URI);
-    my $client = $self->get_client();
+    my $client = $self->_get_client();
     my $r      = $client->queryMore(
         SOAP::Data->name( 'queryLocator' => $in{'queryLocator'} ),
         $limit, $self->get_session_header() );
@@ -868,7 +849,7 @@ sub resetPassword {
         die("A hash expected with key 'userId'");
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("resetPassword")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call(
@@ -927,7 +908,7 @@ sub retrieve {
     }
 
     my @elems;
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method = SOAP::Data->name("retrieve")->prefix($SF_PREFIX)->uri($SF_URI);
     foreach my $id ( @{ $in{'ids'} } ) {
         push( @elems,
@@ -974,7 +955,7 @@ sub search {
     if ( !defined $in{'searchString'} || !length $in{'searchString'} ) {
         die("Expected hash with key 'searchString'");
     }
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method = SOAP::Data->name("search")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r      = $client->call(
         $method => SOAP::Data->prefix($SF_PREFIX)
@@ -1021,7 +1002,7 @@ sub setPassword {
         die("Expected a hash with key 'password'");
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("setPassword")->prefix($SF_PREFIX)->uri($SF_URI);
     my $r = $client->call(
@@ -1116,7 +1097,7 @@ sub update {
           ->attr( { 'xsi:type' => 'sforce:' . $type } );
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("update")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
@@ -1190,7 +1171,7 @@ sub upsert {
           ->attr( { 'xsi:type' => 'sforce:' . $type } );
     }
 
-    my $client = $self->get_client(1);
+    my $client = $self->_get_client(1);
     my $method =
       SOAP::Data->name("upsert")->prefix($SF_PREFIX)->uri($SF_URI)
       ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
@@ -1578,6 +1559,25 @@ sub get_tables {
     return \@globals;
 }
 
+# private methods
+sub _get_client {
+    my $self = shift;
+    my ($readable) = @_;
+    $readable = ($readable) ? 1 : 0;
+
+    my $client =
+      SOAP::Lite->readable($readable)
+      ->deserializer( WWW::Salesforce::Deserializer->new )
+      ->serializer( WWW::Salesforce::Serializer->new )
+      ->on_action( sub { return '""' } )->uri($SF_URI)->multirefinplace(1);
+
+    if($WEB_PROXY) {
+        $client->proxy( $self->{'sf_serverurl'}, proxy => ['https' => $WEB_PROXY ] );
+    } else {
+        $client->proxy( $self->{'sf_serverurl'} );
+    }
+    return $client;
+}
 
 1;
 __END__

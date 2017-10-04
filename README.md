@@ -97,10 +97,6 @@ An array based version of describeSObject; describes metadata (field list and ob
 
 Use the `describeTabs` call to obtain information about the standard and custom apps to which the logged-in user has access. The `describeTabs` call returns the minimum required metadata that can be used to render apps in another user interface. Typically this call is used by partner applications to render Salesforce data in another user interface.
 
-## get\_client( $readable )
-
-Get a client
-
 ## get\_session\_header()
 
 Gets the session header
