@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+
+0.303     2017-10-07
     - Fix dependency issue due to subclass with 'base'.
       Both SOAP::Lite and SOAP define SOAP::Serializer and SOAP seems to win the
       battle over SOAP::Lite in this scenario which isn't what we want or
