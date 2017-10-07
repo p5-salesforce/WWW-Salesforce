@@ -7,7 +7,7 @@ use SOAP::Lite;
 our $VERSION = '0.303';
 $VERSION = eval $VERSION;
 
-use base qw( SOAP::Deserializer );
+our @ISA = qw( SOAP::Deserializer );
 use strict 'refs';
 
 our $XSD_NSPREFIX     = "xsd";
