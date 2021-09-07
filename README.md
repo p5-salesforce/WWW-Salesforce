@@ -4,14 +4,16 @@ WWW::Salesforce - this class provides a simple abstraction layer between SOAP::L
 
 # SYNOPSIS
 
-    use WWW::Salesforce;
-    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
-                                                password => 'bar' ); };
-    die "Could not login to SFDC: $@" if $@;
+```perl
+use WWW::Salesforce;
+my $sforce = eval { WWW::Salesforce->login( username => 'foo',
+                                            password => 'bar' ); };
+die "Could not login to SFDC: $@" if $@;
 
-    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
-    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
-    # by eval'ing and handling any exceptions that occur.
+# eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
+# salesforce.com, so things can go wrong unexpectedly.  Be prepared
+# by eval'ing and handling any exceptions that occur.
+```
 
 # DESCRIPTION
 
@@ -49,8 +51,10 @@ The following are the accepted input parameters:
 
 - %hash\_of\_array\_references
 
-        leadId => [ 2345, 5678, ],
-        contactId => [ 9876, ],
+    ```perl
+    leadId => [ 2345, 5678, ],
+    contactId => [ 9876, ],
+    ```
 
 ## create( HASH )
 
@@ -60,7 +64,9 @@ The hash must contain the 'type' key in order to identify the type of the record
 Returns a SOAP::Lite object.  Success of this operation can be gleaned from
 the envelope result.
 
-    $r->envelope->{Body}->{createResponse}->{result}->{success};
+```
+$r->envelope->{Body}->{createResponse}->{result}->{success};
+```
 
 ## delete( ARRAY )
 
@@ -269,11 +275,13 @@ Get some metadata info about your instance.
 
 Returns a hash with information about errors from API calls - only useful if ($res->valueof('//success') ne 'true')
 
-    {
-        'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
-        'message' => 'Account: bad field names on insert/update call: type'
-        ...
-    }
+```perl
+{
+    'statusCode' => 'INVALID_FIELD_FOR_INSERT_UPDATE',
+    'message' => 'Account: bad field names on insert/update call: type'
+    ...
+}
+```
 
 ## bye()
 
@@ -304,16 +312,20 @@ Each hash gives the properties for each Salesforce object
 
 ## login()
 
-    use WWW::Salesforce;
-    my $sf = WWW::Salesforce->login( 'username' => $user,'password' => $pass )
-        or die $@;
+```perl
+use WWW::Salesforce;
+my $sf = WWW::Salesforce->login( 'username' => $user,'password' => $pass )
+    or die $@;
+```
 
 ## search()
 
-    my $query = 'find {4159017000} in phone fields returning contact(id, phone, ';
-    $query .= 'firstname, lastname), lead(id, phone, firstname, lastname), ';
-    $query .= 'account(id, phone, name)';
-    my $result = $sforce->search( 'searchString' => $query );
+```perl
+my $query = 'find {4159017000} in phone fields returning contact(id, phone, ';
+$query .= 'firstname, lastname), lead(id, phone, firstname, lastname), ';
+$query .= 'account(id, phone, name)';
+my $result = $sforce->search( 'searchString' => $query );
+```
 
 # SUPPORT
 
@@ -330,11 +342,13 @@ Not enough test cases built into the install yet.  More to be added.
 
 # SEE ALSO
 
-    L<DBD::Salesforce> by Jun Shimizu
-    L<SOAP::Lite> by Byrne Reese
+```
+L<DBD::Salesforce> by Jun Shimizu
+L<SOAP::Lite> by Byrne Reese
 
-    Examples on Salesforce website:
-    L<http://www.sforce.com/us/docs/sforce70/wwhelp/wwhimpl/js/html/wwhelp.htm>
+Examples on Salesforce website:
+L<http://www.sforce.com/us/docs/sforce70/wwhelp/wwhimpl/js/html/wwhelp.htm>
+```
 
 # HISTORY
 
