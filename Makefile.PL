@@ -8,7 +8,7 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
+  "ABSTRACT" => "This class provides a simple SOAP client for Salesforce.com.",
   "AUTHOR" => "Chase Whitener <capoeirab\@cpan.org>, Byrne Reese <byrne\@cpan.org>, Fred Moyer <phred\@cpan.org>",
   "BUILD_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
@@ -25,6 +25,7 @@ my %WriteMakefileArgs = (
     "IO::Socket::SSL" => "1.94",
     "LWP::Protocol::https" => "6.00",
     "SOAP::Lite" => "1.0",
+    "URI" => 0,
     "base" => 0,
     "strict" => 0,
     "warnings" => 0
@@ -55,6 +56,7 @@ my %FallbackPrereqs = (
   "POSIX" => 0,
   "SOAP::Lite" => "1.0",
   "Test::More" => "0.88",
+  "URI" => 0,
   "base" => 0,
   "strict" => 0,
   "warnings" => 0

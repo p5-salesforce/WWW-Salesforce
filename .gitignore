@@ -28,3 +28,4 @@ cover_db/
 # Ignore perltidy files
 *.bak
 *.ERR
+.env

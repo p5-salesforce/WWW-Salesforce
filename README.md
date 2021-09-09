@@ -1,43 +1,118 @@
 # NAME
 
-WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
+WWW::Salesforce - This class provides a simple SOAP client for Salesforce.com.
 
 # SYNOPSIS
 
 ```perl
-use WWW::Salesforce;
-my $sforce = eval { WWW::Salesforce->login( username => 'foo',
-                                            password => 'bar' ); };
-die "Could not login to SFDC: $@" if $@;
-
-# eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
-# salesforce.com, so things can go wrong unexpectedly.  Be prepared
-# by eval'ing and handling any exceptions that occur.
+use Try::Tiny;
+use WWW::Salesforce ();
+try {
+    my $sforce = WWW::Salesforce->login(
+        username => 'foo',
+        password => 'password' . 'pass_token',
+        serverurl => 'https://test.salesforce.com',
+        version => '52.0' # must be a string
+    );
+    my $res = $sforce->query(query => 'select Id, Name from Account');
+    say "Found this many: ", $res->valueof('//queryResponse/result/size');
+    my @records = $res->valueof('//queryResponse/result/records');
+    say $records[0];
+}
+catch {
+    # log or whatever. we'll just die for example
+    die "Could not perform an action: $_";
+}
 ```
 
 # DESCRIPTION
 
-This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
+This class provides a simple abstraction layer between [SOAP::Lite](https://metacpan.org/pod/SOAP%3A%3ALite) and
+[Salesforce](https://www.salesforce.com). Because [SOAP::Lite](https://metacpan.org/pod/SOAP%3A%3ALite) does not
+support `complexTypes`, and document/literal encoding is limited, this module
+works around those limitations and provides a more intuitive interface a
+developer can interact with.
+
+# CONSTRUCTOR ARGUMENTS
+
+Given that [WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce) doesn't have attributes in the traditional
+sense, the following arguments, rather than attributes, can be passed
+into the constructor.
+
+## password
+
+```perl
+my $sforce = WWW::Salesforce->new(password => 'foobar1232131');
+```
+
+The password is a combination of your Salesforce password and your user's
+[Security Token](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_concepts_security.htm).
+
+## serverurl
+
+```perl
+my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com');
+# or maybe one of your developer instances
+$sforce = WWW::Salesforce->new(serverurl => 'https://test.salesforce.com');
+```
+
+When you login to Salesforce, it's sometimes useful to login to one of your sandbox or
+other instances. All you need is the base URL here.
+
+## username
+
+```perl
+my $sforce = WWW::Salesforce->new(username => 'foo@bar.com');
+```
+
+When you login to Salesforce, your username is necessary.
+
+## version
+
+```perl
+my $sforce = WWW::Salesforce->new(version => '52.0');
+```
+
+Salesforce makes changes to their API and luckily for us, they version those changes.
+You can choose which API version you want to use by passing this argument. However, it
+**must** be a string.
 
 # CONSTRUCTORS
 
-## new( HASH )
+[WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce) constructs its instance and immediately logs you into the
+[Salesforce](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_login.htm)
+API. So that there's less confusion, we have the traditional constructor as well as a
+second constructor named login.
 
-Synonym for `login`
+## new
 
-## login( HASH )
+```perl
+my $sforce = WWW::Salesforce->new(
+  username => 'foo@bar.com',
+  password => 'password' . 'security_token',
+  serverurl => 'https://login.salesforce.com',
+  version => '52.0'
+);
+```
 
-The `login` method returns an object of type WWW::Salesforce if the login attempt was successful, and `0` otherwise. Upon a successful login, the `sessionId` is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
+When you create a new instance, the ["username" in WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce#username) and ["password" in WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce#password)
+arguments are required. The others are not required. After construction, these items are
+not mutable.
 
-The following are the accepted input parameters:
+## login
 
-- username
+```perl
+my $sforce = WWW::Salesforce->login(
+  username => 'foo@bar.com',
+  password => 'password' . 'security_token',
+  serverurl => 'https://login.salesforce.com',
+  version => '52.0'
+);
+```
 
-    A Salesforce.com username.
-
-- password
-
-    The password for the user indicated by `username`.
+When you create a new instance, the ["username" in WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce#username) and ["password" in WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce#password)
+arguments are required. The others are not required. After construction, these items are
+not mutable.
 
 # METHODS
 
@@ -165,7 +240,12 @@ Ends the session for the logged-in user issuing the call. No arguments are neede
 Useful to avoid hitting the limit of ten open sessions per login.
 [Logout API Call](http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_logout.htm)
 
-## query( HASH )
+## query
+
+```perl
+my $res = $sf->query('SELECT Id, Name FROM Account');
+say Dumper $res->valueof('//QueryResult/records')
+```
 
 Executes a query against the specified object and returns data that matches the specified criteria.
 
@@ -265,7 +345,7 @@ Finally, this method takes one or more perl HASH references containing the field
 
 Get some metadata info about your instance.
 
-## retrieveMetadata()
+## retrieveMetadata
 
 ## checkAsyncStatus( $pid )
 
