@@ -1,5 +1,5 @@
 {
-   "abstract" : "this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.",
+   "abstract" : "This class provides a simple SOAP client for Salesforce.com.",
    "author" : [
       "Chase Whitener <capoeirab@cpan.org>",
       "Byrne Reese <byrne@cpan.org>",
@@ -65,6 +65,7 @@
             "IO::Socket::SSL" : "1.94",
             "LWP::Protocol::https" : "6.00",
             "SOAP::Lite" : "1.0",
+            "URI" : "0",
             "base" : "0",
             "perl" : "5.008001",
             "strict" : "0",

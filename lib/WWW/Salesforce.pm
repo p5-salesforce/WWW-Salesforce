@@ -3,8 +3,9 @@ package WWW::Salesforce;
 use strict;
 use warnings;
 
-use SOAP::Lite;    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
-use DateTime;
+use SOAP::Lite ();    # ( +trace => 'all', readable => 1, );#, outputxml => 1, );
+use DateTime ();
+use URI ();
 # use Data::Dumper;
 use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
@@ -13,12 +14,12 @@ use WWW::Salesforce::Serializer;
 our $VERSION = '0.304';
 $VERSION = eval $VERSION;
 
-our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/8.0';
+our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/52.0';
 our $SF_URI         = 'urn:partner.soap.sforce.com';
 our $SF_PREFIX      = 'sforce';
 our $SF_SOBJECT_URI = 'urn:sobject.partner.soap.sforce.com';
 our $SF_URIM        = 'http://soap.sforce.com/2006/04/metadata';
-our $SF_APIVERSION  = '23.0';
+our $SF_APIVERSION  = '52.0';
 # set webproxy if firewall blocks port 443 to SF_PROXY
 our $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
@@ -27,53 +28,110 @@ our $WEB_PROXY  = ''; # e.g., http://my.proxy.com:8080
 
 =head1 NAME
 
-WWW::Salesforce - this class provides a simple abstraction layer between SOAP::Lite and Salesforce.com.
+WWW::Salesforce - This class provides a simple SOAP client for Salesforce.com.
 
 =head1 SYNOPSIS
 
-    use WWW::Salesforce;
-    my $sforce = eval { WWW::Salesforce->login( username => 'foo',
-                                                password => 'bar' ); };
-    die "Could not login to SFDC: $@" if $@;
-
-    # eval, eval, eval.  WWW::Salesforce uses a SOAP connection to
-    # salesforce.com, so things can go wrong unexpectedly.  Be prepared
-    # by eval'ing and handling any exceptions that occur.
+    use Try::Tiny;
+    use WWW::Salesforce ();
+    try {
+        my $sforce = WWW::Salesforce->login(
+            username => 'foo',
+            password => 'password' . 'pass_token',
+            serverurl => 'https://test.salesforce.com',
+            version => '52.0' # must be a string
+        );
+        my $res = $sforce->query(query => 'select Id, Name from Account');
+        say "Found this many: ", $res->valueof('//queryResponse/result/size');
+        my @records = $res->valueof('//queryResponse/result/records');
+        say $records[0];
+    }
+    catch {
+        # log or whatever. we'll just die for example
+        die "Could not perform an action: $_";
+    }
 
 =head1 DESCRIPTION
 
-This class provides a simple abstraction layer between SOAP::Lite and Salesforce.com. Because SOAP::Lite does not support complexTypes, and document/literal encoding is limited, this module works around those limitations and provides a more intuitive interface a developer can interact with.
+This class provides a simple abstraction layer between L<SOAP::Lite> and
+L<Salesforce|https://www.salesforce.com>. Because L<SOAP::Lite> does not
+support C<complexTypes>, and document/literal encoding is limited, this module
+works around those limitations and provides a more intuitive interface a
+developer can interact with.
+
+=head1 CONSTRUCTOR ARGUMENTS
+
+Given that L<WWW::Salesforce> doesn't have attributes in the traditional
+sense, the following arguments, rather than attributes, can be passed
+into the constructor.
+
+=head2 password
+
+  my $sforce = WWW::Salesforce->new(password => 'foobar1232131');
+
+The password is a combination of your Salesforce password and your user's
+L<Security Token|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_concepts_security.htm>.
+
+=head2 serverurl
+
+  my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com');
+  # or maybe one of your developer instances
+  $sforce = WWW::Salesforce->new(serverurl => 'https://test.salesforce.com');
+
+When you login to Salesforce, it's sometimes useful to login to one of your sandbox or
+other instances. All you need is the base URL here.
+
+=head2 username
+
+  my $sforce = WWW::Salesforce->new(username => 'foo@bar.com');
+
+When you login to Salesforce, your username is necessary.
+
+=head2 version
+
+  my $sforce = WWW::Salesforce->new(version => '52.0');
+
+Salesforce makes changes to their API and luckily for us, they version those changes.
+You can choose which API version you want to use by passing this argument. However, it
+B<must> be a string.
 
 =head1 CONSTRUCTORS
 
-=head2 new( HASH )
+L<WWW::Salesforce> constructs its instance and immediately logs you into the
+L<Salesforce|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_login.htm>
+API. So that there's less confusion, we have the traditional constructor as well as a
+second constructor named login.
 
-Synonym for C<login>
+=head2 new
+
+  my $sforce = WWW::Salesforce->new(
+    username => 'foo@bar.com',
+    password => 'password' . 'security_token',
+    serverurl => 'https://login.salesforce.com',
+    version => '52.0'
+  );
+
+When you create a new instance, the L<WWW::Salesforce/username> and L<WWW::Salesforce/password>
+arguments are required. The others are not required. After construction, these items are
+not mutable.
 
 =cut
 
-sub new {
-    return login(@_);
-}
+sub new { return shift->login(@_); }
 
 
-=head2 login( HASH )
+=head2 login
 
-The C<login> method returns an object of type WWW::Salesforce if the login attempt was successful, and C<0> otherwise. Upon a successful login, the C<sessionId> is saved and the serverUrl set properly so that developers need not worry about setting these values manually. Upon failure, the method dies with an error string.
+  my $sforce = WWW::Salesforce->login(
+    username => 'foo@bar.com',
+    password => 'password' . 'security_token',
+    serverurl => 'https://login.salesforce.com',
+    version => '52.0'
+  );
 
-The following are the accepted input parameters:
-
-=over
-
-=item username
-
-A Salesforce.com username.
-
-=item password
-
-The password for the user indicated by C<username>.
-
-=back
+When you create a new instance, the L<WWW::Salesforce/username> and L<WWW::Salesforce/password>
+arguments are required. The others are not required. After construction, these items are
+not mutable.
 
 =cut
 
@@ -81,20 +139,25 @@ sub login {
     my $class = shift;
     my (%params) = @_;
 
-    unless ( defined $params{'username'} and length $params{'username'} ) {
+    unless (defined $params{'username'} and length $params{'username'}) {
         die("WWW::Salesforce::login() requires a username");
     }
     unless ( defined $params{'password'} and length $params{'password'} ) {
         die("WWW::Salesforce::login() requires a password");
     }
+
+    # build the login URL
+    my $version = $params{version} || $SF_APIVERSION || '52.0';
+    my $url = URI->new($params{serverurl} || $SF_PROXY || 'https://login.salesforce.com');
+    $url->path('/services/Soap/u/' . $version);
+
     my $self = {
         sf_user      => $params{'username'},
         sf_pass      => $params{'password'},
-        sf_serverurl => $SF_PROXY,
+        sf_serverurl => $url->as_string(),
+        sf_version   => $version,
         sf_sid       => undef,                 #session ID
     };
-    $self->{'sf_serverurl'} = $params{'serverurl'}
-      if ( $params{'serverurl'} && length( $params{'serverurl'} ) );
     bless $self, $class;
 
     my $client = $self->_get_client();
@@ -674,7 +737,10 @@ sub logout {
 
 
 
-=head2 query( HASH )
+=head2 query
+
+  my $res = $sf->query('SELECT Id, Name FROM Account');
+  say Dumper $res->valueof('//QueryResult/records')
 
 Executes a query against the specified object and returns data that matches the specified criteria.
 
@@ -1206,7 +1272,7 @@ sub describeMetadata {
 
     my $r = $client->call(
           $method =>
-          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $SF_APIVERSION ), $self->_get_session_header_meta() );
+          SOAP::Data->prefix($SF_PREFIX)->name( 'asOfVersion' )->value( $self->{sf_version} ), $self->_get_session_header_meta() );
     unless ($r) {
         die "could not call method $method";
     }
@@ -1217,7 +1283,7 @@ sub describeMetadata {
 }
 
 
-=head2 retrieveMetadata()
+=head2 retrieveMetadata
 
 =cut
 
@@ -1226,35 +1292,35 @@ sub retrieveMetadata {
     my %list = @_;
     my @req;
     foreach my $i (keys %list) {
-       push (@req,SOAP::Data->name('types'=>
-                        \SOAP::Data->value(
-                            SOAP::Data->name('members'=>$list{$i}),
-                            SOAP::Data->name('name'=>$i)
-                        )
-                    ));
+        push(
+           @req,
+           SOAP::Data->name(
+                'types' => \SOAP::Data->value(
+                    SOAP::Data->name('members' => $list{$i}),
+                    SOAP::Data->name('name' => $i)
+                )
+            )
+        );
     }
     my $client = $self->_get_client_meta(1);
-    my $method =
-      SOAP::Data->name('retrieve')->prefix($SF_PREFIX)->uri($SF_URIM);
+    my $method = SOAP::Data->name('retrieve')->prefix($SF_PREFIX)->uri($SF_URIM);
     my $r = $client->call(
-            $method,
-            $self->_get_session_header_meta(),
-SOAP::Data->name('retrieveRequest'=>
-       \SOAP::Data->value(
-       SOAP::Data->name( 'apiVersion'=>$SF_APIVERSION),
-       SOAP::Data->name( 'singlePackage'=>'true'),
-       SOAP::Data->name('unpackaged'=>
-                   \SOAP::Data->value( @req
-           ,SOAP::Data->name('version'=>$SF_APIVERSION))
-         )
-       )
-     )
+        $method,
+        $self->_get_session_header_meta(),
+        SOAP::Data->name('retrieveRequest' => \SOAP::Data->value(
+            SOAP::Data->name('apiVersion' => $self->{sf_version}),
+            SOAP::Data->name('singlePackage' => 'true'),
+            SOAP::Data->name('unpackaged' => \SOAP::Data->value(
+                @req,
+                SOAP::Data->name('version' => $self->{sf_version})
+            ))
+        ))
     );
     unless ($r) {
         die "could not call method $method";
     }
-    if ( $r->fault() ) {
-        die( $r->faultstring() );
+    if ($r->fault()) {
+        die($r->faultstring());
     }
     $r = $r->valueof('//retrieveResponse/result');
     return $r;
