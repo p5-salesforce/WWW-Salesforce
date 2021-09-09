@@ -9,11 +9,6 @@ on:
 jobs:
   perl:
     runs-on: windows-latest
-    env:
-      SFDC_USER: ${{ secrets.SFDC_USER }}
-      SFDC_PASS: ${{ secrets.SFDC_PASS }}
-      SFDC_TOKEN: ${{ secrets.SFDC_TOKEN }}
-      SFDC_HOST: ${{ secrets.SFDC_HOST }}
     strategy:
       fail-fast: true
       matrix:
@@ -48,3 +43,8 @@ jobs:
         run: cpanm --installdeps .
       - name: Run Tests
         run: cpanm --test-only -v .
+        env:
+          SFDC_USER: ${{secrets.SFDC_USER}}
+          SFDC_PASS: ${{secrets.SFDC_PASS}}
+          SFDC_TOKEN: ${{secrets.SFDC_TOKEN}}
+          SFDC_HOST: ${{secrets.SFDC_HOST}}
