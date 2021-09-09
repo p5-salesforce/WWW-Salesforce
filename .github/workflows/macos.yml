@@ -9,11 +9,6 @@ on:
 jobs:
   perl:
     runs-on: macOS-latest
-    env:
-      SFDC_USER: ${{ secrets.SFDC_USER }}
-      SFDC_PASS: ${{ secrets.SFDC_PASS }}
-      SFDC_TOKEN: ${{ secrets.SFDC_TOKEN }}
-      SFDC_HOST: ${{ secrets.SFDC_HOST }}
     strategy:
       matrix:
         perl-version:
@@ -41,7 +36,9 @@ jobs:
         run: cpanm -n --installdeps .
       - run: id
       - name: Run Tests
-        run: |
-          perl Makefile.PL
-          make
-          make test
+        run: cpanm --test-only -v .
+        env:
+          SFDC_USER: ${{secrets.SFDC_USER}}
+          SFDC_PASS: ${{secrets.SFDC_PASS}}
+          SFDC_TOKEN: ${{secrets.SFDC_TOKEN}}
+          SFDC_HOST: ${{secrets.SFDC_HOST}}

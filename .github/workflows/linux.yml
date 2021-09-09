@@ -9,11 +9,6 @@ on:
 jobs:
   perl:
     runs-on: ubuntu-latest
-    env:
-      SFDC_USER: ${{ secrets.SFDC_USER }}
-      SFDC_PASS: ${{ secrets.SFDC_PASS }}
-      SFDC_TOKEN: ${{ secrets.SFDC_TOKEN }}
-      SFDC_HOST: ${{ secrets.SFDC_HOST }}
     strategy:
       matrix:
         perl-version:
@@ -42,6 +37,9 @@ jobs:
       - name: Run Tests as non-root user "runner"
         run: |
           chown -R runner:runner .
-          runuser runner -c 'perl Makefile.PL'
-          runuser runner -c 'make'
-          runuser runner -c 'make test'
+          runuser runner -c 'cpanm --test-only -v .'
+        env:
+          SFDC_USER: ${{secrets.SFDC_USER}}
+          SFDC_PASS: ${{secrets.SFDC_PASS}}
+          SFDC_TOKEN: ${{secrets.SFDC_TOKEN}}
+          SFDC_HOST: ${{secrets.SFDC_HOST}}
