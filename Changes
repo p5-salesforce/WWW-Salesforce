@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+
+0.304     2021-09-09
     - Update to a newer dzil config
     - Re-document a bit to fix some misconceptions
     - Allow `version` to be passed to the constructor
