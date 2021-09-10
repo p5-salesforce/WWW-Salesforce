@@ -243,19 +243,33 @@ Useful to avoid hitting the limit of ten open sessions per login.
 ## query
 
 ```perl
-my $res = $sf->query('SELECT Id, Name FROM Account');
-say Dumper $res->valueof('//QueryResult/records')
+my $res = $sf->query(query => 'SELECT Id, Name FROM Account');
+$res = $sf->query(query => 'SELECT Id, Name FROM Account', limit => 20);
+# records as an array
+my @records = $res->valueof('//QueryResult/result/records');
+# number of records returned (int)
+my $number = $res->valueof('//QueryResult/result/size');
+# When our query has more results than our limit, we get paged results
+my $done = $res->valueof('//queryResponse/result/done');
+while (!$done) {
+  my $locator = $res->valueof('//queryResponse/result/queryLocator');
+  # use that locator for the queryMore method
+}
 ```
 
-Executes a query against the specified object and returns data that matches the specified criteria.
+Executes a [query](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_query.htm)
+against the specified object and returns data that matches the specified
+criteria.
 
-- query
+The method takes in a hash with two potential keys, `query` and `limit`.
 
-    The query string to use for the query. The query string takes the form of a _basic_ SQL statement. For example, "SELECT Id,Name FROM Account".
+The `query` key is required and should contain an
+[SOQL](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql.htm)
+query string.
 
-- limit
-
-    This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
+The `limit` key sets the batch size, or size of the result returned.
+This is helpful in producing paginated results, or fetching small sets
+of data at a time.
 
 ## queryAll( HASH )
 

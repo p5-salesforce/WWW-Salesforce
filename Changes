@@ -7,7 +7,7 @@ Revision history for Perl extension {{$dist->name}}
     - Allow `serverurl` to be passed to the constructor
     - Setup GitHub Workflows with secrets to actually run tests
     - Use perltidy against our tests
-    - Include Try::Tiny so we can try/catch
+    - Set the default version to be 52.0
 
 0.303     2017-10-07
     - Fix dependency issue due to subclass with 'base'.

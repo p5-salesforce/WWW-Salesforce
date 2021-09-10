@@ -142,13 +142,16 @@ sub login {
     unless (defined $params{'username'} and length $params{'username'}) {
         die("WWW::Salesforce::login() requires a username");
     }
-    unless ( defined $params{'password'} and length $params{'password'} ) {
+    unless (defined $params{'password'} and length $params{'password'}) {
         die("WWW::Salesforce::login() requires a password");
     }
 
     # build the login URL
     my $version = $params{version} || $SF_APIVERSION || '52.0';
-    my $url = URI->new($params{serverurl} || $SF_PROXY || 'https://login.salesforce.com');
+    my $url
+        = URI->new($params{serverurl}
+            || $SF_PROXY
+            || 'https://login.salesforce.com');
     $url->path('/services/Soap/u/' . $version);
 
     my $self = {
@@ -156,31 +159,30 @@ sub login {
         sf_pass      => $params{'password'},
         sf_serverurl => $url->as_string(),
         sf_version   => $version,
-        sf_sid       => undef,                 #session ID
+        sf_sid       => undef,
     };
     bless $self, $class;
 
     my $client = $self->_get_client();
     my $r      = $client->login(
-        SOAP::Data->name( 'username' => $self->{'sf_user'} ),
-        SOAP::Data->name( 'password' => $self->{'sf_pass'} )
+        SOAP::Data->name('username' => $self->{'sf_user'}),
+        SOAP::Data->name('password' => $self->{'sf_pass'})
     );
     unless ($r) {
-        die sprintf( "could not login, user %s, pass %s",
-            $self->{'sf_user'}, $self->{'sf_pass'} );
+        die sprintf("could not login, user %s, pass %s",
+            $self->{'sf_user'}, $self->{'sf_pass'});
     }
-    if ( $r->fault() ) {
-        die( $r->faultstring() );
+    if ($r->fault()) {
+        die($r->faultstring());
     }
 
     $self->{'sf_sid'}       = $r->valueof('//loginResponse/result/sessionId');
     $self->{'sf_uid'}       = $r->valueof('//loginResponse/result/userId');
     $self->{'sf_serverurl'} = $r->valueof('//loginResponse/result/serverUrl');
-    $self->{'sf_metadataServerUrl'} = $r->valueof('//loginResponse/result/metadataServerUrl');
+    $self->{'sf_metadataServerUrl'}
+        = $r->valueof('//loginResponse/result/metadataServerUrl');
     return $self;
 }
-
-
 
 =head1 METHODS
 
@@ -735,58 +737,66 @@ sub logout {
     return $r;
 }
 
-
-
 =head2 query
 
-  my $res = $sf->query('SELECT Id, Name FROM Account');
-  say Dumper $res->valueof('//QueryResult/records')
+  my $res = $sf->query(query => 'SELECT Id, Name FROM Account');
+  $res = $sf->query(query => 'SELECT Id, Name FROM Account', limit => 20);
+  # records as an array
+  my @records = $res->valueof('//QueryResult/result/records');
+  # number of records returned (int)
+  my $number = $res->valueof('//QueryResult/result/size');
+  # When our query has more results than our limit, we get paged results
+  my $done = $res->valueof('//queryResponse/result/done');
+  while (!$done) {
+    my $locator = $res->valueof('//queryResponse/result/queryLocator');
+    # use that locator for the queryMore method
+  }
 
-Executes a query against the specified object and returns data that matches the specified criteria.
+Executes a L<query|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_query.htm>
+against the specified object and returns data that matches the specified
+criteria.
 
-=over
+The method takes in a hash with two potential keys, C<query> and C<limit>.
 
-=item query
+The C<query> key is required and should contain an
+L<SOQL|https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql.htm>
+query string.
 
-The query string to use for the query. The query string takes the form of a I<basic> SQL statement. For example, "SELECT Id,Name FROM Account".
-
-=item limit
-
-This sets the batch size, or size of the result returned. This is helpful in producing paginated results, or fetch small sets of data at a time.
-
-=back
+The C<limit> key sets the batch size, or size of the result returned.
+This is helpful in producing paginated results, or fetching small sets
+of data at a time.
 
 =cut
 
 sub query {
     my $self = shift;
     my (%in) = @_;
-    if ( !defined $in{'query'} || !length $in{'query'} ) {
+    if (!defined $in{'query'} || !length $in{'query'}) {
         die("A query is needed for the query() method.");
     }
-    if ( !defined $in{'limit'} || $in{'limit'} !~ m/^\d+$/ ) {
+    if (!defined $in{'limit'} || $in{'limit'} !~ m/^\d+$/) {
         $in{'limit'} = 500;
     }
-    if ( $in{'limit'} < 1 || $in{'limit'} > 2000 ) {
+    if ($in{'limit'} < 1 || $in{'limit'} > 2000) {
         die("A query's limit cannot exceed 2000. 500 is default.");
     }
 
-    my $limit = SOAP::Header->name(
-        'QueryOptions' => \SOAP::Header->name( 'batchSize' => $in{'limit'} ) )
-      ->prefix($SF_PREFIX)->uri($SF_URI);
+    my $limit
+        = SOAP::Header->name(
+        'QueryOptions' => \SOAP::Header->name('batchSize' => $in{'limit'}))
+        ->prefix($SF_PREFIX)->uri($SF_URI);
     my $client = $self->_get_client();
-    my $r = $client->query( SOAP::Data->type( 'string' => $in{'query'} ),
-        $limit, $self->_get_session_header() );
+    my $r      = $client->query(SOAP::Data->type('string' => $in{'query'}),
+        $limit, $self->_get_session_header());
 
     unless ($r) {
         die "could not query " . $in{'query'};
     }
-    if ( $r->fault() ) {
-        die( $r->faultstring() );
+    if ($r->fault()) {
+        die($r->faultstring());
     }
     return $r;
 }
-
 
 =head2 queryAll( HASH )
 
