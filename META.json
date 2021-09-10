@@ -91,23 +91,23 @@
    "provides" : {
       "WWW::Salesforce" : {
          "file" : "lib/WWW/Salesforce.pm",
-         "version" : "0.304"
+         "version" : "0.305"
       },
       "WWW::Salesforce::Constants" : {
          "file" : "lib/WWW/Salesforce/Constants.pm",
-         "version" : "0.304"
+         "version" : "0.305"
       },
       "WWW::Salesforce::Deserializer" : {
          "file" : "lib/WWW/Salesforce/Deserializer.pm",
-         "version" : "0.304"
+         "version" : "0.305"
       },
       "WWW::Salesforce::Serializer" : {
          "file" : "lib/WWW/Salesforce/Serializer.pm",
-         "version" : "0.304"
+         "version" : "0.305"
       },
       "WWW::Salesforce::Simple" : {
          "file" : "lib/WWW/Salesforce/Simple.pm",
-         "version" : "0.304"
+         "version" : "0.305"
       }
    },
    "release_status" : "stable",
@@ -122,7 +122,7 @@
          "web" : "https://github.com/p5-salesforce/WWW-Salesforce"
       }
    },
-   "version" : "0.304",
+   "version" : "0.305",
    "x_contributors" : [
       "Christopher Mckay <cmckay@iseek.com.au>",
       "Dave Clendenan <dclendenan@gmail.com>",

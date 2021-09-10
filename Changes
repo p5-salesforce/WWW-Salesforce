@@ -1,6 +1,7 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+    - Fix some typos in the query documentation
 
 0.304     2021-09-09
     - Update to a newer dzil config

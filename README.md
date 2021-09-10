@@ -246,9 +246,9 @@ Useful to avoid hitting the limit of ten open sessions per login.
 my $res = $sf->query(query => 'SELECT Id, Name FROM Account');
 $res = $sf->query(query => 'SELECT Id, Name FROM Account', limit => 20);
 # records as an array
-my @records = $res->valueof('//QueryResult/result/records');
+my @records = $res->valueof('//queryResponse/result/records');
 # number of records returned (int)
-my $number = $res->valueof('//QueryResult/result/size');
+my $number = $res->valueof('//queryResponse/result/size');
 # When our query has more results than our limit, we get paged results
 my $done = $res->valueof('//queryResponse/result/done');
 while (!$done) {
