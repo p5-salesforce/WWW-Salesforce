@@ -245,54 +245,97 @@ sub convertLead {
     return $r;
 }
 
-=head2 create( HASH )
+=head2 create
 
-Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
-The hash must contain the 'type' key in order to identify the type of the record to add.
+    # create a new account with a hash
+    my $res = $sforce->create(type => 'Account', name => 'Foo');
+    say $res->envelope->{Body}->{createResponse}->{result}->{success};
 
-Returns a SOAP::Lite object.  Success of this operation can be gleaned from
-the envelope result.
+    # create a new account with a hashref
+    my $res = $sforce->create({type => 'Account', name => 'Foo'});
+    say $res->envelope->{Body}->{createResponse}->{result}->{success};
 
-    $r->envelope->{Body}->{createResponse}->{result}->{success};
+    # create a new account with an extra header and a hash
+    my $header = {
+        AssignmentRuleHeader => {assignmentRuleId => '123RuleID', useDefaultRule => 'true'},
+    };
+    my $res = $sforce->create(-headers => $header, type => 'Account', name => 'Foo');
+    say $res->envelope->{Body}->{createResponse}->{result}->{success};
+
+    # create a new account with an extra header and a hashref
+    my $res = $sforce->create({-headers => $header, type => 'Account', name => 'Foo'});
+    say $res->envelope->{Body}->{createResponse}->{result}->{success};
+
+Adds one new individual object to your organization's data. This takes as
+input an optional extra L<SOAP::Header> object followed by a C<hash> or
+C<hashref> representing the object you wish to add to your organization.
+The hash must contain the C<type> key in order to identify the type of the
+record to add.
+
+Returns a L<SOAP::Lite> object. Success of this operation can be gleaned from
+the envelope result as shown in the examples above.
 
 =cut
-
 sub create {
     my $self = shift;
-    my (%in) = @_;
+    my $args;
+    if (@_ == 1 && CORE::ref($_[0])) {
+        my %copy = eval { %{ $_[0] } }; # try shallow copy
+        die("Argument to create() could not be dereferenced as a hash") if $@;
+        $args = \%copy;
+    }
+    elsif (@_ % 2 == 0) {
+        $args = {@_};
+    }
+    else {
+        die("create() got an odd number of elements");
+    }
+    die('Expected a hash object') unless keys(%{$args});
 
-    if ( !keys %in ) {
-        die("Expected a hash of arrays.");
+    # parse headers
+    my @headers = ($self->_get_session_header());
+    if (defined($args->{-headers})) {
+        unless (CORE::ref($args->{-headers}) eq 'HASH') {
+            die "Expected the -headers parameter to be a hash reference.";
+        }
+        foreach my $key (sort keys %{$args->{-headers}}) {
+            my $h = $self->soap_header($key, $args->{-headers}->{$key});
+            push(@headers, $h) if $h;
+        }
     }
     my $client = $self->_get_client(1);
-    my $method =
-      SOAP::Data->name("create")->prefix($SF_PREFIX)->uri($SF_URI)
-      ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
+    my $method = SOAP::Data
+        ->name("create")
+        ->prefix($SF_PREFIX)
+        ->uri($SF_URI)
+        ->attr({'xmlns:sfons' => $SF_SOBJECT_URI});
 
-    my $type = $in{'type'};
-    delete( $in{'type'} );
+    my $type = $args->{type};
+    delete $args->{type};
+    die('No object type defined to create') unless $type;
 
     my @elems;
-    foreach my $key ( keys %in ) {
-        push @elems,
-          SOAP::Data->prefix('sfons')->name( $key => $in{$key} )
-          ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+    foreach my $key (keys %{$args}) {
+        push @elems, SOAP::Data
+            ->prefix('sfons')
+            ->name($key => $args->{$key})
+            ->type(WWW::Salesforce::Constants->type($type, $key));
     }
 
     my $r = $client->call(
-        $method => SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
-          ->attr( { 'xsi:type' => 'sfons:' . $type } ),
-        $self->_get_session_header()
+        $method => SOAP::Data
+                    ->name('sObjects' => \SOAP::Data->value(@elems))
+                    ->attr({'xsi:type' => 'sfons:' . $type}),
+        @headers
     );
     unless ($r) {
         die "could not call method $method";
     }
-    if ( $r->fault() ) {
-        die( $r->faultstring() );
+    if ($r->fault()) {
+        die($r->faultstring());
     }
     return $r;
 }
-
 
 =head2 delete( ARRAY )
 
@@ -1090,6 +1133,64 @@ sub setPassword {
     return $r;
 }
 
+
+=head2 soap_header
+
+    my $headers = [
+        $sforce->soap_header(AllOrNoneHeader => {allOrNone => 'true'}),
+        $sforce->soap_header(PackageVersionHeader => {packageVersions => [{majorNumber => 1, minorNumber => 0, namespace => 'battle'}]}),
+    ];
+    my $res = $sforce->some_method(-headers: $headers);
+
+This method is merely a convenience for you, the user, to create one of
+the various
+L<SOAP headers|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/soap_headers.htm>
+in a L<SOAP::Header> format to send along with a method call. Any header
+created using this method is I<not> saved in any way. You must pass any
+header you created to the method itself via the special C<-headers> parameter.
+The C<-headers> parameter always takes an array ref of L<SOAP::Header>
+objects.
+
+=cut
+
+# [DebuggingHeader => {
+#     categories => [
+#         {LogInfo => {category => 'All', level => 'DEBUG'}},
+#         {LogInfo => {category => 'System', level => 'INFO'}},
+#     ],
+#     debugLevel => 'none'
+# }],
+sub _soap_header_tag {
+    my ($self, $key, $value) = @_;
+    # hash fun
+    if ($value && CORE::ref($value) eq 'HASH') {
+        my @array;
+        foreach my $k (keys %{$value}) {
+            push @array, $self->_soap_header_tag($k, $value->{$k});
+        }
+        return SOAP::Header->name($key => \SOAP::Header->value(@array))->uri($SF_URI)->prefix($SF_PREFIX);
+    } elsif ($value && CORE::ref($value) eq 'ARRAY') {
+        my @array;
+        foreach my $row (@{$value}) {
+            if ($row && CORE::ref($row) eq 'HASH') {
+                foreach my $k (keys %{$row}) {
+                    push @array, $self->_soap_header_tag($k, $row->{$k});
+                }
+            } else {
+                die "Don't know what to do with this header value";
+            }
+        }
+        return SOAP::Header->name($key => \SOAP::Header->value(@array))->uri($SF_URI)->prefix($SF_PREFIX);
+    }
+    # simplest case, no reference to deal with
+    return SOAP::Header->name($key => $value)->uri($SF_URI)->prefix($SF_PREFIX) unless CORE::ref($value);
+
+}
+sub soap_header {
+    my ($self, $name, $href) = @_;
+    $href = {} unless $href && CORE::ref($href) eq 'HASH';
+    return $self->_soap_header_tag($name, $href);
+}
 
 =head2 sf_date
 

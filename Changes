@@ -2,6 +2,12 @@ Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
     - Fix some typos in the query documentation
+    - Add a way to add a -headers option to various calls:
+      Any call that can have SOAP headers attached can have them added
+    - Add a test for the new method for each of the allowed SOAP headers
+    - Bump the Perl version requirement to 5.14
+    - Require Feature::Compat::Try
+    - Document how to use the -headers feature in the create method
 
 0.304     2021-09-09
     - Update to a newer dzil config

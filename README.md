@@ -131,17 +131,37 @@ The following are the accepted input parameters:
     contactId => [ 9876, ],
     ```
 
-## create( HASH )
+## create
 
-Adds one new individual objects to your organization's data. This takes as input a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
-The hash must contain the 'type' key in order to identify the type of the record to add.
+```perl
+# create a new account with a hash
+my $res = $sforce->create(type => 'Account', name => 'Foo');
+say $res->envelope->{Body}->{createResponse}->{result}->{success};
 
-Returns a SOAP::Lite object.  Success of this operation can be gleaned from
-the envelope result.
+# create a new account with a hashref
+my $res = $sforce->create({type => 'Account', name => 'Foo'});
+say $res->envelope->{Body}->{createResponse}->{result}->{success};
 
+# create a new account with an extra header and a hash
+my $header = {
+    AssignmentRuleHeader => {assignmentRuleId => '123RuleID', useDefaultRule => 'true'},
+};
+my $res = $sforce->create(-headers => $header, type => 'Account', name => 'Foo');
+say $res->envelope->{Body}->{createResponse}->{result}->{success};
+
+# create a new account with an extra header and a hashref
+my $res = $sforce->create({-headers => $header, type => 'Account', name => 'Foo'});
+say $res->envelope->{Body}->{createResponse}->{result}->{success};
 ```
-$r->envelope->{Body}->{createResponse}->{result}->{success};
-```
+
+Adds one new individual object to your organization's data. This takes as
+input an optional extra [SOAP::Header](https://metacpan.org/pod/SOAP%3A%3AHeader) object followed by a `hash` or
+`hashref` representing the object you wish to add to your organization.
+The hash must contain the `type` key in order to identify the type of the
+record to add.
+
+Returns a [SOAP::Lite](https://metacpan.org/pod/SOAP%3A%3ALite) object. Success of this operation can be gleaned from
+the envelope result as shown in the examples above.
 
 ## delete( ARRAY )
 
@@ -336,6 +356,25 @@ Sets the specified user's password to the specified value.
 - password
 
     The new password to assign to the user identified by `userId`.
+
+## soap\_header
+
+```perl
+my $headers = [
+    $sforce->soap_header(AllOrNoneHeader => {allOrNone => 'true'}),
+    $sforce->soap_header(PackageVersionHeader => {packageVersions => [{majorNumber => 1, minorNumber => 0, namespace => 'battle'}]}),
+];
+my $res = $sforce->some_method(-headers: $headers);
+```
+
+This method is merely a convenience for you, the user, to create one of
+the various
+[SOAP headers](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/soap_headers.htm)
+in a [SOAP::Header](https://metacpan.org/pod/SOAP%3A%3AHeader) format to send along with a method call. Any header
+created using this method is _not_ saved in any way. You must pass any
+header you created to the method itself via the special `-headers` parameter.
+The `-headers` parameter always takes an array ref of [SOAP::Header](https://metacpan.org/pod/SOAP%3A%3AHeader)
+objects.
 
 ## sf\_date
 
