@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+
+0.400     2025-09-18
     - Fix some typos in the query documentation
     - Add a new login type, OAuth2.0 Username-Password
     - Add some documentation to show that the SOAP login() method is going away.
