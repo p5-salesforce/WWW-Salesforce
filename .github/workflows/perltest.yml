@@ -1,4 +1,4 @@
-name: windows
+name: CI
 on:
   push:
     branches:
@@ -8,11 +8,9 @@ on:
   pull_request:
 jobs:
   perl:
-    runs-on: windows-latest
     strategy:
-      fail-fast: true
       matrix:
-        perl-version:
+        perl:
           - '5.40'
           # - '5.38'
           # - '5.36'
@@ -21,32 +19,29 @@ jobs:
           # - '5.30'
           # - '5.28'
           # - '5.26'
-          # doesn't work for earlier versions: https://github.com/libuv/libuv/issues/2742
           # - '5.24'
           # - '5.22'
           # - '5.20'
           # - '5.18'
           # - '5.16'
           # - '5.14'
+          # - '5.12'
+          # - '5.10'
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+    runs-on: ${{ matrix.os }}
+    name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
       - name: Setup perl
         uses: shogo82148/actions-setup-perl@v1
         with:
-          perl-version: ${{ matrix.perl-version }}
-          distribution: strawberry
-      - name: Set git to use LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-      - uses: actions/checkout@v4
+          perl-version: ${{ matrix.perl }}
       - name: perl -V
         run: perl -V
-      - name: Install working toolchain
-        run: cpanm ExtUtils::Manifest App::cpanminus
       - name: Install Dependencies
-        run: cpanm --installdeps .
-      - name: Run Tests
-        run: cpanm --test-only -v .
+        run: cpanm -n --installdeps .
+      - name: prove -lv t
+        run: prove -lv t
         env:
           SFDC_USER: ${{secrets.SFDC_USER}}
           SFDC_PASS: ${{secrets.SFDC_PASS}}
