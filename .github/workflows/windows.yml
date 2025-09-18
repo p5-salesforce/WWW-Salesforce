@@ -48,3 +48,5 @@ jobs:
           SFDC_PASS: ${{secrets.SFDC_PASS}}
           SFDC_TOKEN: ${{secrets.SFDC_TOKEN}}
           SFDC_HOST: ${{secrets.SFDC_HOST}}
+          SFDC_CLIENT_ID: ${{secrets.SFDC_CLIENT_ID}}
+          SFDC_CLIENT_SECRET: ${{secrets.SFDC_CLIENT_SECRET}}

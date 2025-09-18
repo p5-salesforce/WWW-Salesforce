@@ -2,26 +2,55 @@
 
 WWW::Salesforce - This class provides a simple SOAP client for Salesforce.com.
 
+# WARNING
+
+**NOTE:** As of version `65.0` of the Salesforce APIs, the SOAP login method will no longer
+exist. Also, the login method for SOAP will be removed after the **Summer ’27 release**. Read about
+this change here: [https://help.salesforce.com/s/articleView?id=005132110&type=1](https://help.salesforce.com/s/articleView?id=005132110&type=1).
+
 # SYNOPSIS
 
 ```perl
-use Try::Tiny;
+use v5.26;
+use Syntax::Keyword::Try;
 use WWW::Salesforce ();
+
 try {
     my $sforce = WWW::Salesforce->login(
+        serverurl => 'https://test.my.salesforce.com',
+        version => '64.0', # must be a string
+        type => 'soap',
         username => 'foo',
-        password => 'password' . 'pass_token',
-        serverurl => 'https://test.salesforce.com',
-        version => '52.0' # must be a string
+        password => 'password' . 'pass_token'
     );
     my $res = $sforce->query(query => 'select Id, Name from Account');
     say "Found this many: ", $res->valueof('//queryResponse/result/size');
     my @records = $res->valueof('//queryResponse/result/records');
     say $records[0];
 }
-catch {
+catch ($e) {
     # log or whatever. we'll just die for example
-    die "Could not perform an action: $_";
+    die "Could not perform an action: $e";
+}
+
+try {
+    my $sforce = WWW::Salesforce->login(
+        serverurl => 'https://test.my.salesforce.com',
+        version => '64.0', # must be a string
+        type => 'oauth2-usernamepassword',
+        client_id => 'abc2134asdgkljag',
+        client_secret => 'axyalaskjag234qdf',
+        username => 'foo',
+        password => 'password' . 'pass_token'
+    );
+    my $res = $sforce->query(query => 'select Id, Name from Account');
+    say "Found this many: ", $res->valueof('//queryResponse/result/size');
+    my @records = $res->valueof('//queryResponse/result/records');
+    say $records[0];
+}
+catch ($e) {
+    # log or whatever. we'll just die for example
+    die "Could not perform an action: $e";
 }
 ```
 
@@ -39,38 +68,97 @@ Given that [WWW::Salesforce](https://metacpan.org/pod/WWW%3A%3ASalesforce) doesn
 sense, the following arguments, rather than attributes, can be passed
 into the constructor.
 
+## client\_id
+
+```perl
+my $sforce = WWW::Salesforce->new(client_id => 'abc123xyz12398', ...);
+my $sforce = WWW::Salesforce->new(clientid => 'abc123xyz12398', ...);
+my $sforce = WWW::Salesforce->new(clientId => 'abc123xyz12398', ...);
+```
+
+The `client_id` or `clientid` or `clientId` is the consumer key of
+the connected app. To access the consumer key, from the **App Manager**, find the
+connected app and select **View** from the dropdown. Then click **Manage Consumer Details**.
+You're sometimes prompted to verify your identity before you can view the consumer key.
+
+## client\_secret
+
+```perl
+my $sforce = WWW::Salesforce->new(client_secret => 'abc123xyz12398', ...);
+my $sforce = WWW::Salesforce->new(clientsecret => 'abc123xyz12398', ...);
+my $sforce = WWW::Salesforce->new(clientSecret => 'abc123xyz12398', ...);
+```
+
+The `client_secret` or `clientsecret` or `clientSecret` is the consumer
+secret of the connected app. To access the consumer secret, from the **App Manager**,
+find the connected app and select **View** from the dropdown. Then click
+**Manage Consumer Details**. You're sometimes prompted to verify your identity
+before you can view the consumer secret.
+
 ## password
 
 ```perl
-my $sforce = WWW::Salesforce->new(password => 'foobar1232131');
+my $sforce = WWW::Salesforce->new(password => 'foobar1232131', ...);
+my $sforce = WWW::Salesforce->new(pass => 'foobar1232131', ...);
 ```
 
-The password is a combination of your Salesforce password and your user's
+The `password` or `pass` is a combination of your Salesforce password and your user's
 [Security Token](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_concepts_security.htm).
 
 ## serverurl
 
 ```perl
-my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com');
-# or maybe one of your developer instances
-$sforce = WWW::Salesforce->new(serverurl => 'https://test.salesforce.com');
+my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com', ...);
+# or maybe one of your specific instance URLs
+my $sforce = WWW::Salesforce->new(serverurl => 'https://test.my.salesforce.com', ...);
+my $sforce = WWW::Salesforce->new(serverUrl => 'https://test.my.salesforce.com', ...);
+my $sforce = WWW::Salesforce->new(instanceurl => 'https://test.my.salesforce.com', ...);
+my $sforce = WWW::Salesforce->new(instanceUrl => 'https://test.my.salesforce.com', ...);
 ```
 
-When you login to Salesforce, it's sometimes useful to login to one of your sandbox or
-other instances. All you need is the base URL here.
+The `serverurl` (or `serverUrl`, `instanceurl`, `instanceUrl`) is used as your host
+to login to Salesforce. The default value here is `https://login.salesforce.com`.
+All you need is the base URL here.
+
+## type
+
+```perl
+my $sforce = WWW::Salesforce->new(type => 'soap', ...);
+my $sforce = WWW::Salesforce->new(
+  type => 'oauth2-usernamepassword',
+  client_id => 'abc2134asdgkljag',
+  client_secret => 'axyalaskjag234qdf',
+  ...
+);
+```
+
+**NOTE:** As of version `65.0` of the Salesforce APIs, the SOAP login method will no longer
+exist. Also, the login method for SOAP will be removed after the **Summer ’27 release**. Read about
+this change here: [https://help.salesforce.com/s/articleView?id=005132110&type=1](https://help.salesforce.com/s/articleView?id=005132110&type=1).
+
+Given that our tried and true method of logging in with the
+[SOAP login](https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_login.htm)
+method is going away, we are now providing you with an option of how to login.
+
+The default login `type` will still be `soap` for now. However, you can get ahead of things by setting your
+login `type` to `oauth2-suernamepassword`. The
+[OAuth 2.0 Username-Password Flow](https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_username_password_flow.htm&type=5)
+will work largely the same way as the old SOAP login, but you'll need to provide a client from your Salesforce
+instance's `App Manager`. Login to the Salesforce front-end and go to **Setup** -> **App Manager**.
 
 ## username
 
 ```perl
-my $sforce = WWW::Salesforce->new(username => 'foo@bar.com');
+my $sforce = WWW::Salesforce->new(username => 'foo@bar.com', ...);
+my $sforce = WWW::Salesforce->new(user => 'foo@bar.com', ...);
 ```
 
-When you login to Salesforce, your username is necessary.
+When you login to Salesforce, your `username` or `user` is necessary.
 
 ## version
 
 ```perl
-my $sforce = WWW::Salesforce->new(version => '52.0');
+my $sforce = WWW::Salesforce->new(version => '64.0');
 ```
 
 Salesforce makes changes to their API and luckily for us, they version those changes.
@@ -91,7 +179,7 @@ my $sforce = WWW::Salesforce->new(
   username => 'foo@bar.com',
   password => 'password' . 'security_token',
   serverurl => 'https://login.salesforce.com',
-  version => '52.0'
+  version => '64.0'
 );
 ```
 
@@ -106,7 +194,7 @@ my $sforce = WWW::Salesforce->login(
   username => 'foo@bar.com',
   password => 'password' . 'security_token',
   serverurl => 'https://login.salesforce.com',
-  version => '52.0'
+  version => '64.0'
 );
 ```
 

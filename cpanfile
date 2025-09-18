@@ -1,12 +1,14 @@
 on 'runtime' => sub {
-    requires 'perl' => '5.008001';
+    requires 'perl' => '5.016';
     requires 'strict';
     requires 'warnings';
     requires 'base';
     requires 'DateTime';
     requires 'Exporter' => '5.57';
     requires 'IO::Socket::SSL' => '1.94';
+    requires 'JSON::MaybeXS' => '1.0';
     requires 'LWP::Protocol::https' => '6.00';
+    requires 'LWP::UserAgent' => '6.80',
     requires 'SOAP::Lite' => '1.0';
     requires 'URI';
 };
