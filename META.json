@@ -26,11 +26,6 @@
       ]
    },
    "prereqs" : {
-      "build" : {
-         "requires" : {
-            "ExtUtils::MakeMaker" : "0"
-         }
-      },
       "configure" : {
          "requires" : {
             "Module::Build::Tiny" : "0.034"
@@ -65,7 +60,7 @@
             "IO::Socket::SSL" : "1.94",
             "JSON::MaybeXS" : "1.0",
             "LWP::Protocol::https" : "6.00",
-            "LWP::UserAgent" : "10",
+            "LWP::UserAgent" : "0",
             "SOAP::Lite" : "1.0",
             "URI" : "0",
             "base" : "0",
