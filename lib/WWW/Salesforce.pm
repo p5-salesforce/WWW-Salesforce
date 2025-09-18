@@ -130,7 +130,6 @@ L<Security Token|https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/
 
   my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com', ...);
   # or maybe one of your specific instance URLs
-  my $sforce = WWW::Salesforce->new(serverurl => 'https://test.my.salesforce.com', ...);
   my $sforce = WWW::Salesforce->new(serverUrl => 'https://test.my.salesforce.com', ...);
   my $sforce = WWW::Salesforce->new(instanceurl => 'https://test.my.salesforce.com', ...);
   my $sforce = WWW::Salesforce->new(instanceUrl => 'https://test.my.salesforce.com', ...);
