@@ -110,7 +110,6 @@ The `password` or `pass` is a combination of your Salesforce password and your u
 ```perl
 my $sforce = WWW::Salesforce->new(serverurl => 'https://login.salesforce.com', ...);
 # or maybe one of your specific instance URLs
-my $sforce = WWW::Salesforce->new(serverurl => 'https://test.my.salesforce.com', ...);
 my $sforce = WWW::Salesforce->new(serverUrl => 'https://test.my.salesforce.com', ...);
 my $sforce = WWW::Salesforce->new(instanceurl => 'https://test.my.salesforce.com', ...);
 my $sforce = WWW::Salesforce->new(instanceUrl => 'https://test.my.salesforce.com', ...);

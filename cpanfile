@@ -8,13 +8,13 @@ on 'runtime' => sub {
     requires 'IO::Socket::SSL' => '1.94';
     requires 'JSON::MaybeXS' => '1.0';
     requires 'LWP::Protocol::https' => '6.00';
-    requires 'LWP::UserAgent' => '6.80',
+    requires 'LWP::UserAgent';
     requires 'SOAP::Lite' => '1.0';
     requires 'URI';
 };
 
-on 'build' => sub {
-    requires 'ExtUtils::MakeMaker';
+on 'configure' => sub {
+    requires 'Module::Build::Tiny';
 };
 
 on 'test' => sub {

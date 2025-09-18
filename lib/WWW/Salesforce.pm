@@ -13,7 +13,7 @@ use WWW::Salesforce::Constants;
 use WWW::Salesforce::Deserializer;
 use WWW::Salesforce::Serializer;
 
-our $VERSION = '0.305';
+our $VERSION = '0.400';
 
 our $SF_PROXY       = 'https://login.salesforce.com/services/Soap/u/64.0';
 our $SF_URI         = 'urn:partner.soap.sforce.com';

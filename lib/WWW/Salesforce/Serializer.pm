@@ -6,7 +6,7 @@ use SOAP::Lite;
 
 our @ISA = qw( SOAP::Serializer );
 
-our $VERSION = '0.305';
+our $VERSION = '0.400';
 
 
 #**************************************************************************
