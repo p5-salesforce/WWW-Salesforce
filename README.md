@@ -231,6 +231,16 @@ the envelope result.
 $r->envelope->{Body}->{createResponse}->{result}->{success};
 ```
 
+## createHdr( header, HASH )
+
+Adds one new individual objects to your organization's data with the specfied header. This takes as input the header and a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
+The hash must contain the 'type' key in order to identify the type of the record to add.
+
+Returns a SOAP::Lite object.  Success of this operation can be gleaned from
+the envelope result.
+
+    $r->envelope->{Body}->{createResponse}->{result}->{success};
+
 ## delete( ARRAY )
 
 Deletes one or more individual objects from your organization's data.
