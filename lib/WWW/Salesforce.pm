@@ -472,6 +472,57 @@ sub create {
 }
 
 
+=head2 createHdr( header, HASH )
+
+Adds one new individual objects to your organization's data with the specfied header. This takes as input the header and a HASH containing the fields (the keys of the hash) and the values of the record you wish to add to your organization.
+The hash must contain the 'type' key in order to identify the type of the record to add.
+
+Returns a SOAP::Lite object.  Success of this operation can be gleaned from
+the envelope result.
+
+    $r->envelope->{Body}->{createResponse}->{result}->{success};
+
+=cut
+
+sub createHdr {
+    my $self = shift;
+    my $header = shift ->uri($SF_URI);
+    my (%in) = @_;
+
+    if ( !keys %in ) {
+        die("Expected a hash of arrays.");
+    }
+    my $client = $self->_get_client(1);
+    my $method =
+      SOAP::Data->name("create")->prefix($SF_PREFIX)->uri($SF_URI)
+      ->attr( { 'xmlns:sfons' => $SF_SOBJECT_URI } );
+
+    my $type = $in{'type'};
+    delete( $in{'type'} );
+
+    my @elems;
+    foreach my $key ( keys %in ) {
+        push @elems,
+          SOAP::Data->prefix('sfons')->name( $key => $in{$key} )
+          ->type( WWW::Salesforce::Constants->type( $type, $key ) );
+    }
+
+    my $r = $client->call(
+        $method => SOAP::Data->name( 'sObjects' => \SOAP::Data->value(@elems) )
+          ->attr( { 'xsi:type' => 'sfons:' . $type } ),
+        $self->_get_session_header(),
+        $header
+    );
+    unless ($r) {
+        die "could not call method $method";
+    }
+    if ( $r->fault() ) {
+        die( $r->faultstring() );
+    }
+    return $r;
+}
+
+
 =head2 delete( ARRAY )
 
 Deletes one or more individual objects from your organization's data.
