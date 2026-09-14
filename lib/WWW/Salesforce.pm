@@ -318,6 +318,10 @@ sub _login_oauth2 {
 sub _login_soap {
     my $self = shift;
 
+    if ($self->{sf_version} > 64.0) {
+        warn "Salesforce doesn't use SOAP login on versions greater than 64.0";
+        $self->{sf_version} = '64.0';
+    }
     my $url = URI->new($self->{sf_serverurl});
     # set the default SOAP path
     $url->path('/services/Soap/u/' . $self->{sf_version});
