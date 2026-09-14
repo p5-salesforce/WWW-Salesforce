@@ -295,8 +295,8 @@ sub _login_oauth2 {
     }
     my $result = JSON::MaybeXS::decode_json($response->decoded_content);
     unless($response->is_success) {
-        use Data::Dumper::Concise qw(Dumper);
-        print Dumper($result);
+        # use Data::Dumper::Concise qw(Dumper);
+        # print Dumper($result);
         die(join(': ', $response->status_line, $result->{error}, $result->{error_description}));
     }
     # we have a successful login. Let's grab some bits we need for later SOAP use
