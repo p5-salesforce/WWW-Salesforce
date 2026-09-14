@@ -156,4 +156,9 @@ sub trap_function {
     is_deeply(WWW::Salesforce::_params({oauth2 => {clientSecret => $client_secret}}), $expected, '_params: input with oauth2 clientId and clientSecret returns the expected hashref');
 }
 
+# test version numbers numerically
+{
+    ok(WWW::Salesforce::_coerce_version('67') < 68.1, 'We can use our versions for numerical comparisons');
+}
+
 done_testing();
