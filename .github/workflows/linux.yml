@@ -2,9 +2,9 @@ name: linux
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags-ignore:
-      - '*'
+      - "*"
   pull_request:
 jobs:
   perl:
@@ -12,26 +12,11 @@ jobs:
     strategy:
       matrix:
         perl-version:
-          - '5.40'
-          # - '5.38'
-          # - '5.36'
-          # - '5.34'
-          # - '5.32'
-          # - '5.30'
-          # - '5.28'
-          # - '5.26'
-          # - '5.24'
-          # - '5.22'
-          # - '5.20'
-          # - '5.18'
-          # - '5.16'
-          # - '5.14'
-          # - '5.12'
-          # - '5.10'
+          - "5.42"
     container:
       image: perl:${{ matrix.perl-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
@@ -49,3 +34,5 @@ jobs:
           SFDC_HOST: ${{secrets.SFDC_HOST}}
           SFDC_CLIENT_ID: ${{secrets.SFDC_CLIENT_ID}}
           SFDC_CLIENT_SECRET: ${{secrets.SFDC_CLIENT_SECRET}}
+          SFDC_CC_CLIENT_ID: ${{secrets.SFDC_CC_CLIENT_ID}}
+          SFDC_CC_CLIENT_SECRET: ${{secrets.SFDC_CC_CLIENT_SECRET}}
