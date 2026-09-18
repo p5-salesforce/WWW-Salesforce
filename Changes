@@ -1,6 +1,8 @@
 Revision history for Perl extension {{$dist->name}}
 
 {{$NEXT}}
+
+0.401     2026-09-18
     - Added the new OAuth2 Client Credentials flow. (Thank you, Ian Broster)
 
 0.400     2025-09-18
