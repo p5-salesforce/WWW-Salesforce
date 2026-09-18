@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use SOAP::Lite;
 
-our $VERSION = '0.401';
+our $VERSION = '0.402';
 
 our @ISA = qw( SOAP::Deserializer );
 use strict 'refs';
